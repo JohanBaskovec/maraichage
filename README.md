@@ -33,13 +33,10 @@ npm run dev                # http://localhost:5173
 ## Déploiement
 
 Le déploiement se fait automatiquement par Cloudflare (Workers Builds) à chaque
-push sur la branche de production. Réglages côté Cloudflare :
+push sur la branche `main`. Réglages côté Cloudflare :
 
 - Commande de build : `npm run build`
 - Commande de déploiement : `npx wrangler deploy`
-
-Avant le premier déploiement, remplacer `database_id` dans `wrangler.jsonc` par
-l'identifiant de la base D1 créée dans le dashboard.
 
 Les secrets (clé Resend, etc.) ne sont jamais commités : en local dans
 `.dev.vars` (voir `.dev.vars.example`), en production dans le dashboard

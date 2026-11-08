@@ -14,8 +14,7 @@
 		{
 			"binding": "DB",
 			"database_name": "maraichage",
-			// À remplacer par le Database ID affiché dans le dashboard Cloudflare (D1).
-			"database_id": "00000000-0000-0000-0000-000000000000",
+			"database_id": "95d2921a-6bfe-442f-a5da-d987240e12ef",
 			"migrations_dir": "drizzle"
 		}
 	]
