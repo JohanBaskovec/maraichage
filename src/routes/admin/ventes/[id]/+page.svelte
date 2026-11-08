@@ -256,10 +256,6 @@
 		vertical-align: middle;
 		font-size: 0.8rem;
 	}
-	h3 {
-		font-size: 1rem;
-		margin: 0 0 0.75rem;
-	}
 	.offre .nom {
 		flex-basis: 100%;
 	}

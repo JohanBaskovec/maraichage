@@ -216,5 +216,13 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
   pages `src/routes/admin/**` ne font que lire les formulaires et appeler ces
   fonctions. Saisie des montants/quantités : `src/lib/format.ts` ; heure de
   Paris ↔ UTC : `src/lib/heure.ts`.
+- Boutique : `src/routes/+page.svelte` (catalogue), `src/routes/commande`
+  (validation) et `src/routes/commande/[id]` (confirmation, l'UUID de la
+  commande sert de clé d'accès). Lectures dans `src/lib/server/boutique.ts`.
+  Le panier vit dans le `localStorage` (`src/lib/stockage.ts`, toujours dans un
+  try/catch) et voyage vers la validation dans l'URL (`?o12=3&o14=1500`,
+  `src/lib/panier.ts`). Le serveur ne fait jamais confiance au panier : tout est
+  revalidé par `passerCommande`. Les clients sont vouvoyés.
+- Nom affiché de la boutique : `NOM_BOUTIQUE` dans `src/lib/config.ts`.
 - Tests de base de données : `baseDeTest()` (`src/lib/server/test/d1.ts`) donne
   une D1 locale en mémoire (Miniflare) avec les migrations appliquées.
