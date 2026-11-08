@@ -30,15 +30,15 @@ comptes clients, livraison, abonnements aux paniers.
 
 ## Pile technique
 
-| Poste | Outil |
-| --- | --- |
-| Framework | SvelteKit + `@sveltejs/adapter-cloudflare` |
-| Hébergement | Cloudflare Pages / Workers |
-| Base de données | Cloudflare D1 (SQLite) + Drizzle ORM |
-| Accès admin | Cloudflare Access (aucun code d'authentification à écrire) |
-| E-mails | Resend |
-| Anti-abus | Cloudflare Turnstile |
-| Tâches planifiées | Worker séparé avec Cron Trigger, même base D1 |
+| Poste             | Outil                                                      |
+| ----------------- | ---------------------------------------------------------- |
+| Framework         | SvelteKit + `@sveltejs/adapter-cloudflare`                 |
+| Hébergement       | Cloudflare Pages / Workers                                 |
+| Base de données   | Cloudflare D1 (SQLite) + Drizzle ORM                       |
+| Accès admin       | Cloudflare Access (aucun code d'authentification à écrire) |
+| E-mails           | Resend                                                     |
+| Anti-abus         | Cloudflare Turnstile                                       |
+| Tâches planifiées | Worker séparé avec Cron Trigger, même base D1              |
 
 Garder la pile minimale : pas de framework CSS lourd, pas de bibliothèque
 d'état, pas de comptes clients, aucun traceur (pas d'analytics, pas de pub,
@@ -53,14 +53,14 @@ Six tables. Les prix sont toujours des entiers en **centimes**. Les quantités
 sont des entiers dans l'**unité de base** : pièces, bottes, ou **grammes** pour
 les produits au kg.
 
-| Table | Rôle | Champs principaux |
-| --- | --- | --- |
-| `produits` | Catalogue permanent | id, nom, unite (`piece`, `botte`, `kg`), pas (ex. 1 pièce, 500 g), photo, actif |
-| `ventes` | Session de vente (souvent hebdomadaire) | id, ouverture, cloture (fin des commandes), statut |
-| `offres` | Ce qui est disponible pour une vente | vente_id, produit_id, prix_centimes (par pièce/botte ou par kg), qte_initiale, qte_reservee |
-| `creneaux` | Retraits possibles | vente_id, date, heure_debut, heure_fin, lieu, capacite |
-| `commandes` | Une commande client | id, reference (ex. `MAR-4F7K`), vente_id, creneau_id, nom, email, telephone, mode_paiement, statut, total_centimes, cree_le, jeton_annulation |
-| `lignes_commande` | Détail | commande_id, offre_id, quantite, prix_unitaire_centimes |
+| Table             | Rôle                                    | Champs principaux                                                                                                                             |
+| ----------------- | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `produits`        | Catalogue permanent                     | id, nom, unite (`piece`, `botte`, `kg`), pas (ex. 1 pièce, 500 g), photo, actif                                                               |
+| `ventes`          | Session de vente (souvent hebdomadaire) | id, ouverture, cloture (fin des commandes), statut                                                                                            |
+| `offres`          | Ce qui est disponible pour une vente    | vente_id, produit_id, prix_centimes (par pièce/botte ou par kg), qte_initiale, qte_reservee                                                   |
+| `creneaux`        | Retraits possibles                      | vente_id, date, heure_debut, heure_fin, lieu, capacite                                                                                        |
+| `commandes`       | Une commande client                     | id, reference (ex. `MAR-4F7K`), vente_id, creneau_id, nom, email, telephone, mode_paiement, statut, total_centimes, cree_le, jeton_annulation |
+| `lignes_commande` | Détail                                  | commande_id, offre_id, quantite, prix_unitaire_centimes                                                                                       |
 
 Règles :
 
@@ -177,3 +177,19 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
   soin et couverte par un test.
 - Ne jamais committer de secret (clé Resend, IBAN réel, jetons Cloudflare) :
   utiliser les variables d'environnement / secrets Cloudflare.
+
+## Conventions du code
+
+- SvelteKit 3 : l'alias est `#lib` (plus `$lib`), avec l'extension explicite
+  (`import { getDb } from '#lib/server/db/index.ts'`). Le type `Handle` vient de
+  `@sveltejs/kit/hooks`.
+- La base est accessible dans le serveur via `event.locals.db` (Drizzle, posé
+  dans `src/hooks.server.ts` à partir du binding D1 `DB`).
+- Schéma dans `src/lib/server/db/schema.ts` ; migrations générées par
+  `npm run db:generate` dans `drizzle/`, appliquées par wrangler
+  (`npm run db:migrate:local` / `db:migrate:remote`).
+- `worker-configuration.d.ts` est généré par `wrangler types` (non commité) ;
+  le relancer après toute modification de `wrangler.jsonc`.
+- Avant de committer : `npm run lint`, `npm run check`, `npm test`.
+- npm 10.9 plante sur `npm install` (bug arborist) : utiliser `npm ci`, ou
+  `npx npm@11 install` pour ajouter une dépendance.

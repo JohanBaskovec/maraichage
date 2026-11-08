@@ -1,0 +1,3 @@
+# Secrets locaux pour `npm run dev` / `npm run preview` (copier en .dev.vars, jamais commité).
+# En production, ils se définissent dans le dashboard Cloudflare ou avec `npx wrangler secret put`.
+# RESEND_API_KEY=""

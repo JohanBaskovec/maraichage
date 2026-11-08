@@ -1,0 +1,16 @@
+{
+	"extends": "$app/tsconfig",
+	"compilerOptions": {
+		"strict": true,
+		// worker-configuration.d.ts importe le worker compilé (.svelte-kit/cloudflare) : on ne vérifie pas le JS généré.
+		"checkJs": false,
+		"types": ["$app/types", "node", "./worker-configuration.d.ts"]
+	},
+	"include": [
+		"src",
+		"vite.config.ts",
+		"prettier.config.js",
+		"eslint.config.js",
+		"drizzle.config.ts"
+	]
+}
