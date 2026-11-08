@@ -1,0 +1,179 @@
+# Maraîchage – site de vente en ligne
+
+Site de vente directe pour un maraîcher. Chaque semaine, le maraîcher saisit sa
+récolte (produits, quantités, prix). Les clients choisissent librement produits
+et quantités, sans compte ni panier imposé, réservent un créneau de retrait et
+paient au retrait ou par virement.
+
+Coût cible : le nom de domaine seul (environ 10 €/an). Tout le reste doit tenir
+dans les offres gratuites.
+
+Document de conception complet (source de vérité) :
+https://claude.ai/artifact/6anJ2ptSqbBRx8bpBUMWvz
+
+Langue : interface, contenus et messages de commit en français. Noms de tables
+et de colonnes en français, sans accents (`commandes`, `qte_reservee`).
+
+## Périmètre du MVP
+
+Dans le MVP :
+
+- Saisie hebdomadaire des produits et quantités (« 200 concombres à 0,80 € pièce »,
+  « 80 kg de pommes de terre à 2,50 €/kg »).
+- Catalogue public avec le stock restant, panier, commande sans compte.
+- Choix d'un créneau de retrait.
+- Paiement au retrait ou par virement, sans frais.
+- Back-office : liste des commandes, statut payé / récupéré, récap de préparation.
+
+Hors MVP (ne pas implémenter sans demande explicite) : paiement par carte,
+comptes clients, livraison, abonnements aux paniers.
+
+## Pile technique
+
+| Poste | Outil |
+| --- | --- |
+| Framework | SvelteKit + `@sveltejs/adapter-cloudflare` |
+| Hébergement | Cloudflare Pages / Workers |
+| Base de données | Cloudflare D1 (SQLite) + Drizzle ORM |
+| Accès admin | Cloudflare Access (aucun code d'authentification à écrire) |
+| E-mails | Resend |
+| Anti-abus | Cloudflare Turnstile |
+| Tâches planifiées | Worker séparé avec Cron Trigger, même base D1 |
+
+Garder la pile minimale : pas de framework CSS lourd, pas de bibliothèque
+d'état, pas de comptes clients, aucun traceur (pas d'analytics, pas de pub,
+donc pas de bandeau cookies).
+
+Le back-office vit sous `/admin` ; ce chemin est protégé par Cloudflare Access.
+Le code ne gère pas l'authentification lui-même.
+
+## Modèle de données
+
+Six tables. Les prix sont toujours des entiers en **centimes**. Les quantités
+sont des entiers dans l'**unité de base** : pièces, bottes, ou **grammes** pour
+les produits au kg.
+
+| Table | Rôle | Champs principaux |
+| --- | --- | --- |
+| `produits` | Catalogue permanent | id, nom, unite (`piece`, `botte`, `kg`), pas (ex. 1 pièce, 500 g), photo, actif |
+| `ventes` | Session de vente (souvent hebdomadaire) | id, ouverture, cloture (fin des commandes), statut |
+| `offres` | Ce qui est disponible pour une vente | vente_id, produit_id, prix_centimes (par pièce/botte ou par kg), qte_initiale, qte_reservee |
+| `creneaux` | Retraits possibles | vente_id, date, heure_debut, heure_fin, lieu, capacite |
+| `commandes` | Une commande client | id, reference (ex. `MAR-4F7K`), vente_id, creneau_id, nom, email, telephone, mode_paiement, statut, total_centimes, cree_le, jeton_annulation |
+| `lignes_commande` | Détail | commande_id, offre_id, quantite, prix_unitaire_centimes |
+
+Règles :
+
+- Le prix est **recopié** dans `lignes_commande` : un changement de prix ne
+  modifie jamais une commande passée.
+- Prix d'une ligne au poids = `prix_centimes × grammes ÷ 1000`, arrondi au
+  centime. Le client ajoute par pas de 500 g (ou le `pas` du produit).
+- Au kg, le maraîcher sert au plus près du poids commandé et le prix reste
+  celui de la commande (tolérance précisée dans les CGV).
+- Référence de commande courte, sans caractères ambigus (pas de 0/O, 1/I).
+
+Statuts d'une commande :
+
+```
+en_attente_paiement → confirmee → prete → recuperee
+                    ↘ annulee
+confirmee / prete   → non_recuperee   (posé par le maraîcher après le créneau)
+```
+
+Après **deux** commandes `non_recuperee`, le même e-mail ou téléphone ne peut
+plus commander ; le maraîcher peut débloquer depuis le back-office.
+
+## Stock sans survente (critique)
+
+La réservation se fait par mise à jour conditionnelle, jamais par
+« lire puis écrire » :
+
+```sql
+UPDATE offres
+SET qte_reservee = qte_reservee + :quantite
+WHERE id = :offre_id
+  AND qte_initiale - qte_reservee >= :quantite;
+```
+
+- Une requête par ligne du panier, toutes dans un même lot transactionnel
+  (`db.batch()` sur D1) : tout le panier passe ou rien ne passe.
+- Si une ligne ne modifie aucune rangée, on annule tout et on affiche
+  « il ne reste que 3 concombres ».
+- Une commande annulée ou expirée rend son stock (`qte_reservee - quantite`).
+- La clôture de la vente est vérifiée **côté serveur**, jamais seulement dans
+  l'interface.
+- Limite par produit et par commande (par exemple 20) et Turnstile sur le
+  formulaire, pour qu'une fausse commande ne bloque pas tout le stock.
+- Un test automatisé lance 50 commandes simultanées sur un stock de 10 et
+  vérifie qu'exactement 10 unités partent. Ce test existe **avant** la page de
+  commande.
+- Ajustement manuel du stock : si la nouvelle quantité passe sous
+  `qte_reservee`, l'interface le signale et liste les commandes à réduire ou
+  annuler.
+
+## Paiement sans frais
+
+- **Au retrait** (espèces, chèque) : commande `confirmee` immédiatement ; le
+  maraîcher clique « payée » sur place.
+- **Virement** : commande `en_attente_paiement`. La confirmation affiche l'IBAN
+  et la référence à mettre en libellé. Le maraîcher valide à réception.
+- **Expiration** : un Worker séparé (Cron Trigger) annule les virements non
+  reçus après un délai (par exemple 24 h, ou la veille du retrait si c'est plus
+  tôt) et libère le stock.
+- Option : QR code de virement au format EPC, toujours avec l'IBAN en clair à
+  côté.
+
+## Parcours
+
+Client (trois écrans, sans compte) :
+
+1. Catalogue de la semaine : produits, prix, « reste 143 », boutons + / −. Le
+   panier vit dans le navigateur.
+2. Validation : nom, e-mail, téléphone, créneau, mode de paiement, case
+   d'acceptation des CGV, bouton qui dit clairement qu'il engage la commande.
+3. Confirmation : référence, récapitulatif, IBAN et référence si virement. Le
+   même contenu part par e-mail.
+
+E-mail de rappel la veille avec un lien d'annulation en un clic
+(`jeton_annulation`) ; le stock est remis en vente.
+
+Back-office (`/admin`, utilisable depuis un téléphone) :
+
+- Nouvelle vente : dupliquer la semaine précédente, ajuster quantités et prix,
+  fixer la clôture et les créneaux. Cible : moins de 5 minutes.
+- Commandes : liste filtrable par créneau et statut, boutons « payée » et
+  « récupérée », marquage « non récupérée ».
+- Récap de préparation : totaux par produit, puis une fiche par client.
+  Imprimable.
+- Ajustement manuel du stock.
+
+## Obligations légales
+
+Pages à prévoir : mentions légales (identité, SIRET, adresse, hébergeur), CGV
+(prix TTC, commande, paiement, retrait, commandes non récupérées, exclusion du
+droit de rétractation pour les denrées périssables, tolérance de poids),
+confidentialité RGPD (données collectées, usage, durée, suppression).
+
+## Plan de développement
+
+- **Phase 0 – Mise en place** : compte Cloudflare, domaine, dépôt Git, projet
+  SvelteKit + adaptateur Cloudflare, D1, Drizzle, ce fichier, déploiement
+  automatique à chaque push.
+- **Phase 1 – MVP vendable** : schéma et migrations, back-office protégé,
+  création de vente (offres, créneaux, duplication), catalogue + panier +
+  validation + réservation atomique, paiement au retrait uniquement, liste des
+  commandes et récap, test de concurrence.
+- **Phase 2 – Prêt à ouvrir** : e-mail de confirmation, virement (IBAN,
+  référence, expiration), pages légales, rappel la veille avec annulation,
+  statut non récupérée et blocage, anti-abus, test complet sur téléphone.
+- **Phase 3 – Confort** : photos (R2), export CSV, e-mail « commande prête »,
+  paiement par carte seulement si nécessaire.
+
+## Façon de travailler
+
+- Avancer une étape à la fois.
+- Schéma et tests d'abord, écrans ensuite.
+- Toute requête SQL qui touche au stock ou aux statuts doit être relue avec
+  soin et couverte par un test.
+- Ne jamais committer de secret (clé Resend, IBAN réel, jetons Cloudflare) :
+  utiliser les variables d'environnement / secrets Cloudflare.
