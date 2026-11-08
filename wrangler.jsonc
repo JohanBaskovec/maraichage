@@ -10,6 +10,12 @@
 	},
 	"workers_dev": true,
 	"preview_urls": true,
+	// Cloudflare Access (back-office) : nom d'équipe Zero Trust et « AUD tag » de l'application.
+	// Valeurs publiques, pas des secrets. Tant qu'elles sont vides, /admin est fermé en production.
+	"vars": {
+		"ACCESS_EQUIPE": "",
+		"ACCESS_AUD": ""
+	},
 	"d1_databases": [
 		{
 			"binding": "DB",

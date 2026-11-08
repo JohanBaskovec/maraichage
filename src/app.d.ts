@@ -5,10 +5,8 @@ declare global {
 	namespace App {
 		interface Locals {
 			db: Db;
-		}
-		interface Platform {
-			env: Env;
-			ctx: ExecutionContext;
+			/** E-mail de la personne connectée au back-office (Cloudflare Access). */
+			admin?: string;
 		}
 	}
 }

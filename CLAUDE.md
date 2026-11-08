@@ -45,7 +45,11 @@ d'état, pas de comptes clients, aucun traceur (pas d'analytics, pas de pub,
 donc pas de bandeau cookies).
 
 Le back-office vit sous `/admin` ; ce chemin est protégé par Cloudflare Access.
-Le code ne gère pas l'authentification lui-même.
+Le code ne gère ni comptes ni mots de passe : `src/hooks.server.ts` vérifie
+seulement le jeton signé qu'Access ajoute (`Cf-Access-Jwt-Assertion`), avec les
+variables `ACCESS_EQUIPE` et `ACCESS_AUD` de `wrangler.jsonc`. Sans elles ou sans
+jeton valide, `/admin` répond 403 en production (fermé par défaut). En
+développement (`npm run dev`), `/admin` est ouvert.
 
 ## Modèle de données
 
@@ -196,8 +200,10 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
 - SvelteKit 3 : l'alias est `#lib` (plus `$lib`), avec l'extension explicite
   (`import { getDb } from '#lib/server/db/index.ts'`). Le type `Handle` vient de
   `@sveltejs/kit/hooks`.
-- La base est accessible dans le serveur via `event.locals.db` (Drizzle, posé
-  dans `src/hooks.server.ts` à partir du binding D1 `DB`).
+- Les bindings et variables Cloudflare se lisent avec
+  `import { env } from 'cloudflare:workers'` (adaptateur v8 ; pas
+  `event.platform`). La base est accessible dans le serveur via
+  `event.locals.db` (Drizzle, posé dans `src/hooks.server.ts`).
 - Schéma dans `src/lib/server/db/schema.ts` ; migrations générées par
   `npm run db:generate` dans `drizzle/`, appliquées par wrangler
   (`npm run db:migrate:local` / `db:migrate:remote`).
@@ -206,5 +212,9 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
 - Avant de committer : `npm run lint`, `npm run check`, `npm test`.
 - npm 10.9 plante sur `npm install` (bug arborist) : utiliser `npm ci`, ou
   `npx npm@11 install` pour ajouter une dépendance.
+- Opérations du back-office dans `src/lib/server/admin.ts` (testées) ; les
+  pages `src/routes/admin/**` ne font que lire les formulaires et appeler ces
+  fonctions. Saisie des montants/quantités : `src/lib/format.ts` ; heure de
+  Paris ↔ UTC : `src/lib/heure.ts`.
 - Tests de base de données : `baseDeTest()` (`src/lib/server/test/d1.ts`) donne
   une D1 locale en mémoire (Miniflare) avec les migrations appliquées.
