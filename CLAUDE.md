@@ -62,6 +62,13 @@ les produits au kg.
 | `commandes`       | Une commande client                     | id, reference (ex. `MAR-4F7K`), vente_id, creneau_id, nom, email, telephone, mode_paiement, statut, total_centimes, cree_le, jeton_annulation |
 | `lignes_commande` | Détail                                  | commande_id, offre_id, quantite, prix_unitaire_centimes                                                                                       |
 
+Colonnes ajoutées au schéma réel (`src/lib/server/db/schema.ts`) :
+`commandes.payee` (le paiement est suivi à part du statut : une commande au
+retrait est `confirmee` puis payée sur place) et `creneaux.nb_commandes`
+(compteur tenu à jour pour faire respecter `capacite`, null = sans limite).
+Statuts d'une vente : `brouillon`, `publiee`, `archivee` ; une vente prend des
+commandes si elle est `publiee` et que `ouverture <= maintenant < cloture`.
+
 Règles :
 
 - Le prix est **recopié** dans `lignes_commande` : un changement de prix ne
@@ -85,21 +92,27 @@ plus commander ; le maraîcher peut débloquer depuis le back-office.
 
 ## Stock sans survente (critique)
 
-La réservation se fait par mise à jour conditionnelle, jamais par
-« lire puis écrire » :
+La réservation ne fait jamais « lire puis écrire ». Elle repose sur une
+contrainte de la base :
 
 ```sql
-UPDATE offres
-SET qte_reservee = qte_reservee + :quantite
-WHERE id = :offre_id
-  AND qte_initiale - qte_reservee >= :quantite;
+CONSTRAINT "offres_stock_suffisant"
+  CHECK (qte_reservee >= 0 AND qte_reservee <= qte_initiale)
 ```
 
-- Une requête par ligne du panier, toutes dans un même lot transactionnel
-  (`db.batch()` sur D1) : tout le panier passe ou rien ne passe.
-- Si une ligne ne modifie aucune rangée, on annule tout et on affiche
-  « il ne reste que 3 concombres ».
-- Une commande annulée ou expirée rend son stock (`qte_reservee - quantite`).
+- Une commande = un seul `db.batch()` D1 (une transaction) : insertion de la
+  commande, `qte_reservee = qte_reservee + quantite` pour chaque ligne,
+  insertion des lignes, `creneaux.nb_commandes + 1`.
+- S'il n'y a plus assez de stock, l'incrément viole la contrainte, D1 annule
+  tout le lot : tout le panier passe ou rien ne passe. (Un `UPDATE … WHERE
+stock suffisant` qui modifie 0 rangée n'échouerait pas et laisserait passer
+  un panier partiel : ne pas l'utiliser seul.)
+- Sur cet échec, on relit le stock et on affiche « il ne reste que 3
+  concombres ». Même principe pour la capacité du créneau
+  (`creneaux_capacite_respectee`).
+- Une commande annulée ou expirée rend son stock et sa place de créneau, dans
+  un lot dont chaque écriture est conditionnée au statut encore actif
+  (idempotent). Voir `src/lib/server/commandes.ts`.
 - La clôture de la vente est vérifiée **côté serveur**, jamais seulement dans
   l'interface.
 - Limite par produit et par commande (par exemple 20) et Turnstile sur le
@@ -193,3 +206,5 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
 - Avant de committer : `npm run lint`, `npm run check`, `npm test`.
 - npm 10.9 plante sur `npm install` (bug arborist) : utiliser `npm ci`, ou
   `npx npm@11 install` pour ajouter une dépendance.
+- Tests de base de données : `baseDeTest()` (`src/lib/server/test/d1.ts`) donne
+  une D1 locale en mémoire (Miniflare) avec les migrations appliquées.
