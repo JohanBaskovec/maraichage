@@ -4,7 +4,12 @@
 
 	let { data, form }: PageProps = $props();
 
+	// Formulaire « nouveau produit » piloté par l'état : après un ajout, on vide
+	// seulement le nom (une remise à zéro native viderait aussi le pas).
+	let nomNouveau = $state('');
 	let uniteNouveau = $state<'piece' | 'botte' | 'kg'>('piece');
+	let pasNouveau = $state('1');
+	const pasParDefaut = (unite: string) => (unite === 'kg' ? '0,5' : '1');
 
 	const UNITES = { piece: 'à la pièce', botte: 'à la botte', kg: 'au kg' };
 	const pasPourChamp = (unite: string, pas: number) =>
@@ -19,13 +24,26 @@
 	leur quantité.
 </p>
 
-<form method="POST" action="?/creer" class="carte" use:enhance>
+<form
+	method="POST"
+	action="?/creer"
+	class="carte"
+	use:enhance={() =>
+		async ({ result, update }) => {
+			await update({ reset: false });
+			if (result.type === 'success') nomNouveau = '';
+		}}
+>
 	<h2>Nouveau produit</h2>
 	<div class="ligne">
-		<label>Nom <input name="nom" required placeholder="Concombre" /></label>
+		<label>Nom <input name="nom" required placeholder="Concombre" bind:value={nomNouveau} /></label>
 		<label>
 			Vendu
-			<select name="unite" bind:value={uniteNouveau}>
+			<select
+				name="unite"
+				bind:value={uniteNouveau}
+				onchange={() => (pasNouveau = pasParDefaut(uniteNouveau))}
+			>
 				{#each Object.entries(UNITES) as [valeur, libelle] (valeur)}
 					<option value={valeur}>{libelle}</option>
 				{/each}
@@ -34,13 +52,7 @@
 		<label>
 			Le client ajoute par
 			<span class="avec-unite">
-				<input
-					name="pas"
-					required
-					inputmode="decimal"
-					size="5"
-					value={uniteNouveau === 'kg' ? '0,5' : '1'}
-				/>
+				<input name="pas" required inputmode="decimal" size="5" bind:value={pasNouveau} />
 				{uniteNouveau === 'kg' ? 'kg' : uniteNouveau === 'botte' ? 'botte(s)' : 'pièce(s)'}
 			</span>
 		</label>

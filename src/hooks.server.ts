@@ -1,9 +1,27 @@
-import { error } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { dev } from '$app/env';
 import { env } from 'cloudflare:workers';
 import { estRouteAdmin, verifierAcces } from '#lib/server/acces.ts';
 import { getDb } from '#lib/server/db/index.ts';
+
+/**
+ * En-têtes ajoutés à toutes les réponses :
+ * - pas d'affichage dans un cadre (« clickjacking » sur le back-office) ;
+ * - l'adresse de la page n'est pas transmise aux autres sites (celle de la
+ *   confirmation contient l'identifiant secret de la commande) ;
+ * - le navigateur ne devine pas le type des fichiers.
+ */
+const EN_TETES_SECURITE = {
+	'x-frame-options': 'DENY',
+	'content-security-policy': "frame-ancestors 'none'",
+	'referrer-policy': 'same-origin',
+	'x-content-type-options': 'nosniff'
+};
+
+function avecEnTetes(reponse: Response): Response {
+	for (const [nom, valeur] of Object.entries(EN_TETES_SECURITE)) reponse.headers.set(nom, valeur);
+	return reponse;
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.db = getDb(env.DB);
@@ -20,10 +38,17 @@ export const handle: Handle = async ({ event, resolve }) => {
 				equipe: env.ACCESS_EQUIPE,
 				aud: env.ACCESS_AUD
 			});
-			if (!email) error(403, 'Accès réservé.');
+			if (!email) {
+				return avecEnTetes(
+					new Response('Accès réservé.', {
+						status: 403,
+						headers: { 'content-type': 'text/plain; charset=utf-8' }
+					})
+				);
+			}
 			event.locals.admin = email;
 		}
 	}
 
-	return resolve(event);
+	return avecEnTetes(await resolve(event));
 };

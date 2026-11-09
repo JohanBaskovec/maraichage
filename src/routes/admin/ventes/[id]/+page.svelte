@@ -144,7 +144,17 @@
 {/each}
 
 {#if data.produits.length > 0}
-	<form method="POST" action="?/ajouterOffre" use:enhance class="carte">
+	<form
+		method="POST"
+		action="?/ajouterOffre"
+		class="carte"
+		use:enhance={() =>
+			async ({ result, update }) => {
+				await update();
+				// Après un ajout, le menu revient sur « Choisir… » : l'unité affichée doit suivre.
+				if (result.type === 'success') produitChoisi = undefined;
+			}}
+	>
 		<h3>Ajouter un produit</h3>
 		<div class="ligne">
 			<label>

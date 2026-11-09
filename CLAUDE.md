@@ -209,7 +209,8 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
   (`npm run db:migrate:local` / `db:migrate:remote`).
 - `worker-configuration.d.ts` est généré par `wrangler types` (non commité) ;
   le relancer après toute modification de `wrangler.jsonc`.
-- Avant de committer : `npm run lint`, `npm run check`, `npm test`.
+- Avant de committer : `npm run lint`, `npm run check`, `npm test`, et
+  `npm run test:e2e` si une page change.
 - npm 10.9 plante sur `npm install` (bug arborist) : utiliser `npm ci`, ou
   `npx npm@11 install` pour ajouter une dépendance.
 - Opérations du back-office dans `src/lib/server/admin.ts` (testées) ; les
@@ -226,3 +227,25 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
 - Nom affiché de la boutique : `NOM_BOUTIQUE` dans `src/lib/config.ts`.
 - Tests de base de données : `baseDeTest()` (`src/lib/server/test/d1.ts`) donne
   une D1 locale en mémoire (Miniflare) avec les migrations appliquées.
+
+## Tests
+
+- **Unitaires** (`src/lib/*.spec.ts`) : fonctions pures (prix, formats, heure,
+  panier, stockage navigateur).
+- **Intégration sur D1 locale** (`src/lib/server/*.spec.ts`) : commandes et
+  concurrence, back-office, boutique, vérification du jeton Access.
+- **Pages serveur** (`src/routes/**/page.server.spec.ts`) : `load` et actions
+  appelés avec `evenement()` (`src/lib/server/test/evenement.ts`). Déclarer
+  `load` et `actions` avec `satisfies PageServerLoad` / `satisfies Actions`.
+- **Bout en bout** (`e2e/`, Playwright, `npm run test:e2e`) : boutique et
+  sécurité sur le build de production servi par wrangler (base pré-remplie par
+  `e2e/donnees-boutique.sql`) ; back-office sur `vite dev` (seul endroit où
+  `/admin` s'ouvre sans Access). Chaque page testée passe aussi un contrôle
+  d'accessibilité (axe, WCAG AA) et de largeur sur téléphone. Dans les tests
+  du back-office, attendre la fin d'un envoi avec `envoyer()`, pas avec
+  `networkidle`.
+- **GitHub Actions** (`.github/workflows/verifications.yml`) : lint, types,
+  tests, synchronisation schéma ↔ migrations, bout en bout, à chaque push.
+- Sécurité : le contrôle d'accès au back-office se fait sur la route choisie
+  par SvelteKit (`estRouteAdmin`), jamais sur le texte de l'URL (`/%61dmin`).
+  Toutes les réponses portent les en-têtes de `src/hooks.server.ts`.

@@ -29,3 +29,7 @@ vite.config.ts.timestamp-*
 
 # Types générés par `wrangler types` (prepare / build / check)
 worker-configuration.d.ts
+
+# Tests de bout en bout
+/test-results
+/playwright-report

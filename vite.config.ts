@@ -10,7 +10,12 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter({
+				// Tests de bout en bout : base locale dédiée (voir e2e/preparer-base.mjs).
+				platformProxy: process.env.E2E_PERSIST
+					? { persist: { path: process.env.E2E_PERSIST } }
+					: undefined
+			})
 		})
 	],
 	test: {
