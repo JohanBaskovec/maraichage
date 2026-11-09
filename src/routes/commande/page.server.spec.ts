@@ -10,7 +10,7 @@ import {
 import type { Db } from '#lib/server/db/index.ts';
 import { commandes } from '#lib/server/db/schema.ts';
 import { baseDeTest } from '#lib/server/test/d1.ts';
-import { evenement, executer } from '#lib/server/test/evenement.ts';
+import { courrielsDeTest, evenement, executer } from '#lib/server/test/evenement.ts';
 import { actions, load } from './+page.server.ts';
 
 let db: Db;
@@ -91,6 +91,43 @@ describe('action commander', () => {
 		expect(r).toMatchObject({ redirection: expect.stringMatching(/^\/commande\/[0-9a-f-]{36}$/) });
 		const [c] = await db.select().from(commandes);
 		expect(c).toMatchObject({ modePaiement: 'retrait', statut: 'confirmee', totalCentimes: 160 });
+	});
+
+	it('envoie l’e-mail de confirmation', async () => {
+		const t = courrielsDeTest();
+		await executer(() =>
+			actions.commander(
+				evenement(db, {
+					url: 'https://ferme.example/commande',
+					form: formulaire(),
+					courriels: t.courriels
+				})
+			)
+		);
+		const [c] = await db.select().from(commandes);
+		expect(t.envoyes).toHaveLength(1);
+		expect(t.envoyes[0]).toMatchObject({
+			a: 'camille@example.fr',
+			sujet: expect.stringContaining(c.reference)
+		});
+		expect(t.envoyes[0].texte).toContain(`https://ferme.example/commande/${c.id}`);
+	});
+
+	it('un échec d’envoi n’empêche pas la commande', async () => {
+		const t = courrielsDeTest(false);
+		const r = await executer(() =>
+			actions.commander(evenement(db, { form: formulaire(), courriels: t.courriels }))
+		);
+		expect(r).toHaveProperty('redirection');
+		expect(await db.$count(commandes)).toBe(1);
+	});
+
+	it('n’envoie rien quand la commande est refusée', async () => {
+		const t = courrielsDeTest();
+		await executer(() =>
+			actions.commander(evenement(db, { form: formulaire({ cgv: '' }), courriels: t.courriels }))
+		);
+		expect(t.envoyes).toEqual([]);
 	});
 
 	it('accepte le virement quand il est configuré', async () => {

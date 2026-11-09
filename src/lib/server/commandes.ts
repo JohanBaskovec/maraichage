@@ -355,7 +355,7 @@ export async function annulerParClient(
 }
 
 /** Début du créneau de retrait, à l'heure de Paris. */
-function debutRetrait(creneau: { date: string; heureDebut: string }): Date {
+export function debutRetrait(creneau: { date: string; heureDebut: string }): Date {
 	const debut = depuisChampParis(`${creneau.date}T${creneau.heureDebut}`);
 	if (!debut) throw new Error(`Créneau illisible : ${creneau.date} ${creneau.heureDebut}`);
 	return debut;

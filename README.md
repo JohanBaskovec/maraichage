@@ -40,8 +40,9 @@ push sur la branche `main`. Réglages côté Cloudflare :
 
 ### Worker des tâches planifiées
 
-`workers/taches/` est un second Worker (`maraichage-taches`) qui annule toutes
-les 15 minutes les virements non reçus à temps. Il partage la base D1. Pour le
+`workers/taches/` est un second Worker (`maraichage-taches`) qui, toutes les
+15 minutes, annule les virements non reçus à temps et envoie les e-mails de
+rappel de la veille. Il partage la base D1. Pour le
 déployer avec le site, la commande de déploiement Cloudflare devient :
 
 ```sh
@@ -56,6 +57,10 @@ Paiement par virement : `VIREMENT_IBAN`, `VIREMENT_TITULAIRE` et
 (facultatif) `VIREMENT_BIC`, à définir comme **secrets** du Worker `maraichage`
 (tableau de bord → Settings → Variables and Secrets → Add → type Secret). Sans
 eux, ou si l'IBAN est invalide, seul le paiement au retrait est proposé.
+
+E-mails : secret `RESEND_API_KEY` à définir dans **les deux** Workers
+(`maraichage` pour la confirmation, `maraichage-taches` pour le rappel de la
+veille). Sans lui, la boutique fonctionne mais n'envoie aucun e-mail.
 
 Les secrets (clé Resend, etc.) ne sont jamais commités : en local dans
 `.dev.vars` (voir `.dev.vars.example`), en production dans le dashboard
