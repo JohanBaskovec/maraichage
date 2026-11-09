@@ -9,6 +9,9 @@
 		"directory": ".svelte-kit/cloudflare"
 	},
 	"workers_dev": true,
+	// Aucune tâche planifiée sur le site (elles sont dans workers/taches). Liste vide
+	// explicite : efface un déclencheur qui aurait été posé par erreur.
+	"triggers": { "crons": [] },
 	"preview_urls": true,
 	// Cloudflare Access (back-office) : nom d'équipe Zero Trust et « AUD tag » de l'application.
 	// Valeurs publiques, pas des secrets. Si elles sont vides, /admin est fermé en production.

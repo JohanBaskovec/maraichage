@@ -51,6 +51,10 @@ npm run db:migrate:remote && npx wrangler deploy && npm run deploy:taches
 
 Journaux : tableau de bord Cloudflare → Workers → `maraichage-taches` → Logs.
 
+⚠️ Le système de build de Cloudflare impose le nom du Worker du site
+(`WRANGLER_CI_OVERRIDE_NAME`) : `deploy:taches` retire cette variable (et
+`WRANGLER_CI_MATCH_TAG`), sinon le Worker des tâches écraserait le site.
+
 ### Secrets
 
 Paiement par virement : `VIREMENT_IBAN`, `VIREMENT_TITULAIRE` et
