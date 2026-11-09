@@ -135,6 +135,8 @@ export const commandes = sqliteTable(
 		payee: integer('payee', { mode: 'boolean' }).notNull().default(false),
 		/** Virement : date limite de paiement, après laquelle la commande est annulée. */
 		paiementAvant: integer('paiement_avant', { mode: 'timestamp_ms' }),
+		/** Envoi de l'e-mail de rappel de la veille (évite les doublons). */
+		rappelEnvoyeLe: integer('rappel_envoye_le', { mode: 'timestamp_ms' }),
 		/**
 		 * Commande non récupérée que le maraîcher a pardonnée (« Débloquer ») :
 		 * elle ne compte plus pour le blocage du client.

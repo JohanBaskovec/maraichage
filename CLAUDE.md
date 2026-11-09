@@ -177,6 +177,18 @@ Client (trois écrans, sans compte) :
 E-mail de rappel la veille avec un lien d'annulation en un clic
 (`jeton_annulation`) ; le stock est remis en vente.
 
+E-mails (réalisé) : `src/lib/server/courriels/` — `envoi.ts` (API Resend,
+secret `RESEND_API_KEY` dans les deux Workers ; sans clé rien n'est envoyé, un
+échec d'envoi ne lève jamais d'erreur et n'annule jamais une commande) et
+`modeles.ts` (confirmation, rappel ; HTML à styles en ligne + texte brut ; tout
+contenu saisi passe par `echapper`). La confirmation part depuis l'action de
+`/commande` via `event.locals.courriels` (hook) ; le rappel part du Worker des
+tâches (`envoyerRappels`, `src/lib/server/rappels.ts`) : à partir de 24 h avant
+le retrait, sauf commande passée depuis moins de 6 h, une seule fois
+(`commandes.rappel_envoye_le` réservé avant l'envoi, libéré si l'envoi échoue).
+Expéditeur, adresse de réponse et `URL_BOUTIQUE` (liens des rappels) dans
+`src/lib/config.ts` (adresses provisoires). Tests : `courrielsDeTest()`.
+
 Back-office (`/admin`, utilisable depuis un téléphone) :
 
 - Nouvelle vente : dupliquer la semaine précédente, ajuster quantités et prix,

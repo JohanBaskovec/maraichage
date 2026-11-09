@@ -1,6 +1,9 @@
 // Worker des tâches planifiées (Cron Triggers), séparé du site : l'adaptateur
 // SvelteKit ne gère pas les tâches planifiées. Même base D1 que le site.
-// Déployé par `npm run deploy:taches` (voir README).
+// Déployé par `npm run deploy:taches` (voir README). Le système de build de
+// Cloudflare impose le nom du Worker du site (WRANGLER_CI_OVERRIDE_NAME) et
+// vérifie qu'on le déploie bien (WRANGLER_CI_MATCH_TAG) : le script retire ces
+// deux variables, sinon ce Worker écraserait le site.
 {
 	"$schema": "../../node_modules/wrangler/config-schema.json",
 	"name": "maraichage-taches",

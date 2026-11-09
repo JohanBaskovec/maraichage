@@ -1,4 +1,5 @@
 import type { CoordonneesVirement } from '#lib/virement.ts';
+import type { Courriel, Courrielleur } from '../courriels/envoi.ts';
 import type { Db } from '../db/index.ts';
 
 /**
@@ -12,13 +13,18 @@ export function evenement(
 		params?: Record<string, string>;
 		form?: Record<string, string>;
 		virement?: CoordonneesVirement | null;
+		courriels?: Courrielleur;
 	} = {}
 ) {
 	const url = new URL(options.url ?? 'http://localhost/');
 	const corps = new FormData();
 	for (const [cle, valeur] of Object.entries(options.form ?? {})) corps.append(cle, valeur);
 	return {
-		locals: { db, virement: options.virement ?? null },
+		locals: {
+			db,
+			virement: options.virement ?? null,
+			courriels: options.courriels ?? { envoyer: async () => true }
+		},
 		url,
 		params: options.params ?? {},
 		request: new Request(url, { method: 'POST', body: corps }),
@@ -40,4 +46,18 @@ export async function executer<T>(
 		}
 		throw e;
 	}
+}
+
+/** Faux envoyeur d'e-mails qui garde les messages pour les vérifier. */
+export function courrielsDeTest(reussite = true) {
+	const envoyes: Courriel[] = [];
+	return {
+		envoyes,
+		courriels: {
+			async envoyer(c: Courriel) {
+				envoyes.push(c);
+				return reussite;
+			}
+		} satisfies Courrielleur
+	};
 }

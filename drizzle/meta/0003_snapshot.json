@@ -1,0 +1,612 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "id": "5146ce74-1118-43a7-b95e-8f22266b7511",
+  "prevId": "a0f6e17e-14b2-4f70-9f4b-bbec50aa7d9f",
+  "tables": {
+    "commandes": {
+      "name": "commandes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "reference": {
+          "name": "reference",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "vente_id": {
+          "name": "vente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "creneau_id": {
+          "name": "creneau_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "nom": {
+          "name": "nom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "telephone": {
+          "name": "telephone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "mode_paiement": {
+          "name": "mode_paiement",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "statut": {
+          "name": "statut",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "payee": {
+          "name": "payee",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "paiement_avant": {
+          "name": "paiement_avant",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "rappel_envoye_le": {
+          "name": "rappel_envoye_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "absence_excusee": {
+          "name": "absence_excusee",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "total_centimes": {
+          "name": "total_centimes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cree_le": {
+          "name": "cree_le",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsec') * 1000 as integer))"
+        },
+        "jeton_annulation": {
+          "name": "jeton_annulation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "commandes_reference_unique": {
+          "name": "commandes_reference_unique",
+          "columns": [
+            "reference"
+          ],
+          "isUnique": true
+        },
+        "commandes_jeton_annulation_unique": {
+          "name": "commandes_jeton_annulation_unique",
+          "columns": [
+            "jeton_annulation"
+          ],
+          "isUnique": true
+        },
+        "commandes_vente_creneau": {
+          "name": "commandes_vente_creneau",
+          "columns": [
+            "vente_id",
+            "creneau_id"
+          ],
+          "isUnique": false
+        },
+        "commandes_email": {
+          "name": "commandes_email",
+          "columns": [
+            "email"
+          ],
+          "isUnique": false
+        },
+        "commandes_telephone": {
+          "name": "commandes_telephone",
+          "columns": [
+            "telephone"
+          ],
+          "isUnique": false
+        },
+        "commandes_statut_paiement_avant": {
+          "name": "commandes_statut_paiement_avant",
+          "columns": [
+            "statut",
+            "paiement_avant"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "commandes_vente_id_ventes_id_fk": {
+          "name": "commandes_vente_id_ventes_id_fk",
+          "tableFrom": "commandes",
+          "tableTo": "ventes",
+          "columnsFrom": [
+            "vente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "commandes_creneau_id_creneaux_id_fk": {
+          "name": "commandes_creneau_id_creneaux_id_fk",
+          "tableFrom": "commandes",
+          "tableTo": "creneaux",
+          "columnsFrom": [
+            "creneau_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "commandes_mode_paiement_valide": {
+          "name": "commandes_mode_paiement_valide",
+          "value": "\"commandes\".\"mode_paiement\" in ('retrait', 'virement')"
+        },
+        "commandes_statut_valide": {
+          "name": "commandes_statut_valide",
+          "value": "\"commandes\".\"statut\" in ('en_attente_paiement', 'confirmee', 'prete', 'recuperee', 'annulee', 'non_recuperee')"
+        }
+      }
+    },
+    "creneaux": {
+      "name": "creneaux",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "vente_id": {
+          "name": "vente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "heure_debut": {
+          "name": "heure_debut",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "heure_fin": {
+          "name": "heure_fin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "lieu": {
+          "name": "lieu",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "capacite": {
+          "name": "capacite",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "nb_commandes": {
+          "name": "nb_commandes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "creneaux_vente_id_ventes_id_fk": {
+          "name": "creneaux_vente_id_ventes_id_fk",
+          "tableFrom": "creneaux",
+          "tableTo": "ventes",
+          "columnsFrom": [
+            "vente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "creneaux_capacite_respectee": {
+          "name": "creneaux_capacite_respectee",
+          "value": "\"creneaux\".\"nb_commandes\" >= 0 and (\"creneaux\".\"capacite\" is null or \"creneaux\".\"nb_commandes\" <= \"creneaux\".\"capacite\")"
+        }
+      }
+    },
+    "lignes_commande": {
+      "name": "lignes_commande",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "commande_id": {
+          "name": "commande_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "offre_id": {
+          "name": "offre_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "quantite": {
+          "name": "quantite",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "prix_unitaire_centimes": {
+          "name": "prix_unitaire_centimes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "lignes_commande_offre_idx": {
+          "name": "lignes_commande_offre_idx",
+          "columns": [
+            "offre_id"
+          ],
+          "isUnique": false
+        },
+        "lignes_commande_offre": {
+          "name": "lignes_commande_offre",
+          "columns": [
+            "commande_id",
+            "offre_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "lignes_commande_commande_id_commandes_id_fk": {
+          "name": "lignes_commande_commande_id_commandes_id_fk",
+          "tableFrom": "lignes_commande",
+          "tableTo": "commandes",
+          "columnsFrom": [
+            "commande_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "lignes_commande_offre_id_offres_id_fk": {
+          "name": "lignes_commande_offre_id_offres_id_fk",
+          "tableFrom": "lignes_commande",
+          "tableTo": "offres",
+          "columnsFrom": [
+            "offre_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "lignes_commande_quantite_positive": {
+          "name": "lignes_commande_quantite_positive",
+          "value": "\"lignes_commande\".\"quantite\" > 0"
+        }
+      }
+    },
+    "offres": {
+      "name": "offres",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "vente_id": {
+          "name": "vente_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "produit_id": {
+          "name": "produit_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "prix_centimes": {
+          "name": "prix_centimes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "qte_initiale": {
+          "name": "qte_initiale",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "qte_reservee": {
+          "name": "qte_reservee",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "offres_vente_produit": {
+          "name": "offres_vente_produit",
+          "columns": [
+            "vente_id",
+            "produit_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "offres_vente_id_ventes_id_fk": {
+          "name": "offres_vente_id_ventes_id_fk",
+          "tableFrom": "offres",
+          "tableTo": "ventes",
+          "columnsFrom": [
+            "vente_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "offres_produit_id_produits_id_fk": {
+          "name": "offres_produit_id_produits_id_fk",
+          "tableFrom": "offres",
+          "tableTo": "produits",
+          "columnsFrom": [
+            "produit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "offres_prix_positif": {
+          "name": "offres_prix_positif",
+          "value": "\"offres\".\"prix_centimes\" >= 0"
+        },
+        "offres_stock_suffisant": {
+          "name": "offres_stock_suffisant",
+          "value": "\"offres\".\"qte_reservee\" >= 0 and \"offres\".\"qte_reservee\" <= \"offres\".\"qte_initiale\""
+        }
+      }
+    },
+    "produits": {
+      "name": "produits",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "unite": {
+          "name": "unite",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "pas": {
+          "name": "pas",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 1
+        },
+        "photo": {
+          "name": "photo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "actif": {
+          "name": "actif",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "produits_unite_valide": {
+          "name": "produits_unite_valide",
+          "value": "\"produits\".\"unite\" in ('piece', 'botte', 'kg')"
+        },
+        "produits_pas_positif": {
+          "name": "produits_pas_positif",
+          "value": "\"produits\".\"pas\" > 0"
+        }
+      }
+    },
+    "ventes": {
+      "name": "ventes",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "ouverture": {
+          "name": "ouverture",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cloture": {
+          "name": "cloture",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "statut": {
+          "name": "statut",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'brouillon'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "ventes_statut_valide": {
+          "name": "ventes_statut_valide",
+          "value": "\"ventes\".\"statut\" in ('brouillon', 'publiee', 'archivee')"
+        },
+        "ventes_dates_coherentes": {
+          "name": "ventes_dates_coherentes",
+          "value": "\"ventes\".\"ouverture\" < \"ventes\".\"cloture\""
+        }
+      }
+    }
+  },
+  "views": {},
+  "enums": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
+    "indexes": {}
+  }
+}

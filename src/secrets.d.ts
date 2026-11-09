@@ -10,5 +10,7 @@ declare namespace Cloudflare {
 		VIREMENT_BIC?: string;
 		/** Nom du titulaire du compte, tel que la banque l'affiche. */
 		VIREMENT_TITULAIRE?: string;
+		/** Clé d'API Resend pour envoyer les e-mails (dans les deux Workers). */
+		RESEND_API_KEY?: string;
 	}
 }

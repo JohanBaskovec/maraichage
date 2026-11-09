@@ -48,3 +48,17 @@ export const INFOS_LEGALES = {
 		site: 'https://www.cloudflare.com'
 	}
 };
+
+/** Adresse publique de la boutique, pour les liens des e-mails envoyés par les tâches planifiées. */
+export const URL_BOUTIQUE = 'https://ferme.johanbaskovec.fr';
+
+/** Expéditeur des e-mails (domaine vérifié chez Resend). Adresse provisoire. */
+export const EXPEDITEUR_COURRIELS = 'La ferme d’Océane <commandes@johanbaskovec.fr>';
+
+/** Adresse à laquelle arrivent les réponses des clients. Adresse provisoire. */
+export const REPONSE_COURRIELS = 'contact@johanbaskovec.fr';
+
+/** L'e-mail de rappel part à partir de ce délai avant le début du retrait (« la veille »)… */
+export const RAPPEL_HEURES_AVANT_RETRAIT = 24;
+/** …mais pas pour une commande passée il y a moins de ce délai (la confirmation est récente). */
+export const RAPPEL_DELAI_MINIMUM_APRES_COMMANDE_HEURES = 6;

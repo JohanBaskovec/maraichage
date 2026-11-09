@@ -1,0 +1,1 @@
+ALTER TABLE `commandes` ADD `rappel_envoye_le` integer;

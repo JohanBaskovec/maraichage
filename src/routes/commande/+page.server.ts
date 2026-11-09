@@ -1,7 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { formatQuantite } from '#lib/format.ts';
 import { quantitesDepuisUrl, recapitulatif } from '#lib/panier.ts';
-import { venteEnCours } from '#lib/server/boutique.ts';
+import { lireCommande, venteEnCours } from '#lib/server/boutique.ts';
+import { courrielConfirmation } from '#lib/server/courriels/modeles.ts';
 import { passerCommande, type Manque } from '#lib/server/commandes.ts';
 import { entier, texte } from '#lib/server/formulaire.ts';
 import type { Actions, PageServerLoad } from './$types';
@@ -24,7 +25,7 @@ function phraseManque(m: Manque, unite: 'piece' | 'botte' | 'kg') {
 }
 
 export const actions = {
-	commander: async ({ locals, request }) => {
+	commander: async ({ locals, request, url }) => {
 		const form = await request.formData();
 		const saisie = {
 			nom: texte(form, 'nom'),
@@ -65,7 +66,16 @@ export const actions = {
 			lignes
 		});
 
-		if (r.ok) redirect(303, `/commande/${r.id}`);
+		if (r.ok) {
+			// E-mail de confirmation : un échec d'envoi n'annule jamais la commande.
+			const commande = await lireCommande(locals.db, r.id);
+			if (commande) {
+				await locals.courriels.envoyer(
+					courrielConfirmation(commande, { urlBase: url.origin, virement: locals.virement })
+				);
+			}
+			redirect(303, `/commande/${r.id}`);
+		}
 		switch (r.erreur) {
 			case 'saisie_invalide':
 				return echec(r.message);
