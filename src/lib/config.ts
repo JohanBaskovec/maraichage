@@ -1,7 +1,7 @@
 // Réglages de la boutique.
 
 /** Nom affiché en tête de la boutique et dans les titres de page. */
-export const NOM_BOUTIQUE = 'Maraîchage';
+export const NOM_BOUTIQUE = 'La ferme d’Océane';
 
 /**
  * Quantité maximale d'un produit dans une commande, en nombre de « pas » :
@@ -22,3 +22,29 @@ export const DELAI_VIREMENT_HEURES = 24;
 export const VIREMENT_HEURES_AVANT_RETRAIT = 24;
 /** En dessous de ce délai pour payer, le virement n'est pas proposé (retrait trop proche). */
 export const VIREMENT_DELAI_MINIMUM_HEURES = 2;
+
+/**
+ * Informations légales (mentions légales, CGV, confidentialité).
+ * ⚠️ PROVISOIRES : données fictives en attendant le SIRET et l'adresse réels.
+ * Tant que `provisoire` vaut `true`, un bandeau l'annonce sur les pages légales.
+ * Tout remplacer et passer `provisoire` à `false` avant d'ouvrir au public.
+ */
+export const INFOS_LEGALES = {
+	provisoire: true,
+	exploitant: 'Océane Exemple',
+	statut: 'Entrepreneur individuel – exploitant agricole',
+	siret: '000 000 000 00000',
+	adresse: '42 rue de la Ferme, 00000 Exempleville',
+	email: 'contact@johanbaskovec.fr',
+	telephone: '06 00 00 00 00',
+	directeurPublication: 'Océane Exemple',
+	/** Médiateur de la consommation (obligatoire pour vendre aux particuliers). */
+	mediateur: null as { nom: string; site: string } | null,
+	hebergeur: {
+		nom: 'Cloudflare, Inc.',
+		adresse: '101 Townsend Street, San Francisco, CA 94107, États-Unis',
+		// À vérifier sur le site de Cloudflare avant l'ouverture.
+		telephone: '+1 650 319 8930',
+		site: 'https://www.cloudflare.com'
+	}
+};

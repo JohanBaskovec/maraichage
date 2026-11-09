@@ -194,6 +194,14 @@ Pages à prévoir : mentions légales (identité, SIRET, adresse, hébergeur), C
 droit de rétractation pour les denrées périssables, tolérance de poids),
 confidentialité RGPD (données collectées, usage, durée, suppression).
 
+Réalisé : `/mentions-legales`, `/cgv`, `/confidentialite` (composant
+`src/lib/composants/PageLegale.svelte`), liées dans le pied de page de la
+boutique. Les informations d'identification viennent de `INFOS_LEGALES` dans
+`src/lib/config.ts` et les délais des constantes de config (jamais écrits en
+dur dans les textes). ⚠️ Données **fictives** tant que `INFOS_LEGALES.provisoire`
+vaut `true` (SIRET, adresse, exploitant, téléphone, médiateur) : un bandeau le
+signale. Textes à faire relire (chambre d'agriculture, conseiller).
+
 ## Plan de développement
 
 - **Phase 0 – Mise en place** : compte Cloudflare, domaine, dépôt Git, projet

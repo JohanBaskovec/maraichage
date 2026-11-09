@@ -196,3 +196,21 @@ test('une adresse de commande ou d’annulation inconnue répond 404', async ({ 
 		expect(reponse?.status()).toBe(404);
 	}
 });
+
+test('les pages légales sont accessibles depuis le pied de page', async ({ page }) => {
+	for (const [lien, titre, extrait] of [
+		['Mentions légales', 'Mentions légales', 'Cloudflare, Inc.'],
+		['Conditions générales de vente', 'Conditions générales de vente', 'L221-28'],
+		['Confidentialité', 'Politique de confidentialité', 'CNIL']
+	]) {
+		await ouvrir(page, '/');
+		await page.getByRole('contentinfo').getByRole('link', { name: lien }).click();
+		await expect(page.getByRole('heading', { level: 1 })).toHaveText(titre);
+		await expect(page.locator('main')).toContainText(extrait);
+		await expect(page.locator('main')).toContainText('La ferme d’Océane');
+		// Données fictives : le bandeau doit le dire tant qu'elles ne sont pas remplacées.
+		await expect(page.getByRole('note')).toContainText('Version provisoire');
+		await verifierAccessibilite(page);
+		await verifierLargeur(page);
+	}
+});
