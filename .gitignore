@@ -33,3 +33,9 @@ worker-configuration.d.ts
 # Tests de bout en bout
 /test-results
 /playwright-report
+
+# IntelliJ / JetBrains
+.idea/
+*.iml
+*.ipr
+*.iws
