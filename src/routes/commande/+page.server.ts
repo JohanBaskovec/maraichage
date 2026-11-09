@@ -6,14 +6,14 @@ import { passerCommande, type Manque } from '#lib/server/commandes.ts';
 import { entier, texte } from '#lib/server/formulaire.ts';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals, url }) => {
+export const load = (async ({ locals, url }) => {
 	const vente = await venteEnCours(locals.db);
 	if (!vente) return { vente: null, recap: null };
 	return {
 		vente: { id: vente.id, cloture: vente.cloture, creneaux: vente.creneaux },
 		recap: recapitulatif(vente.offres, quantitesDepuisUrl(url.searchParams))
 	};
-};
+}) satisfies PageServerLoad;
 
 /** « il ne reste que 3 concombres », « Pommes de terre : épuisé » */
 function phraseManque(m: Manque, unite: 'piece' | 'botte' | 'kg') {
@@ -22,7 +22,7 @@ function phraseManque(m: Manque, unite: 'piece' | 'botte' | 'kg') {
 		: `${m.produit} : épuisé.`;
 }
 
-export const actions: Actions = {
+export const actions = {
 	commander: async ({ locals, request }) => {
 		const form = await request.formData();
 		const saisie = {
@@ -76,4 +76,4 @@ export const actions: Actions = {
 			}
 		}
 	}
-};
+} satisfies Actions;

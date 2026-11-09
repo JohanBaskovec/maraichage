@@ -37,7 +37,7 @@ function idVente(params: { id: string }) {
 	return id;
 }
 
-export const load: PageServerLoad = async ({ locals, params }) => {
+export const load = (async ({ locals, params }) => {
 	const vente = await lireVente(locals.db, idVente(params));
 	if (!vente) error(404, 'Vente introuvable.');
 	const dejaEnVente = new Set(vente.offres.map((o) => o.produitId));
@@ -45,9 +45,9 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		(p) => p.actif && !dejaEnVente.has(p.id)
 	);
 	return { vente, produits };
-};
+}) satisfies PageServerLoad;
 
-export const actions: Actions = {
+export const actions = {
 	dates: async ({ locals, params, request }) => {
 		const form = await request.formData();
 		const ouverture = depuisChampParis(texte(form, 'ouverture'));
@@ -151,4 +151,4 @@ export const actions: Actions = {
 		if (!r.ok) return echec({ action: 'retirerCreneau', creneau: creneauId, message: r.message });
 		return reussite({ action: 'retirerCreneau', ok: true });
 	}
-};
+} satisfies Actions;

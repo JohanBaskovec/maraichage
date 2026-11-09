@@ -2,13 +2,13 @@ import { error } from '@sveltejs/kit';
 import type { Handle } from '@sveltejs/kit/hooks';
 import { dev } from '$app/env';
 import { env } from 'cloudflare:workers';
-import { verifierAcces } from '#lib/server/acces.ts';
+import { estRouteAdmin, verifierAcces } from '#lib/server/acces.ts';
 import { getDb } from '#lib/server/db/index.ts';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.db = getDb(env.DB);
 
-	if (event.url.pathname === '/admin' || event.url.pathname.startsWith('/admin/')) {
+	if (estRouteAdmin(event.route.id, event.url.pathname)) {
 		if (dev) {
 			event.locals.admin = 'dev@local';
 		} else {
