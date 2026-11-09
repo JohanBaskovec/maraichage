@@ -217,6 +217,13 @@ confidentialité RGPD (données collectées, usage, durée, suppression).
   pages `src/routes/admin/**` ne font que lire les formulaires et appeler ces
   fonctions. Saisie des montants/quantités : `src/lib/format.ts` ; heure de
   Paris ↔ UTC : `src/lib/heure.ts`.
+- Suivi des commandes (`src/lib/server/admin-commandes.ts`, pages
+  `/admin/ventes/[id]/commandes` et `/preparation`) : chaque écriture filtre
+  sur la vente de la page et sur le statut de départ (transitions dans
+  `TRANSITIONS`) ; une commande annulée ne revient jamais. Le tri et la
+  recherche par nom se font en JavaScript (SQLite ignore les accents
+  majuscules et trie octet par octet). D1 limite le nombre de paramètres :
+  pas de `IN (…)` sur une liste longue.
 - Boutique : `src/routes/+page.svelte` (catalogue), `src/routes/commande`
   (validation) et `src/routes/commande/[id]` (confirmation, l'UUID de la
   commande sert de clé d'accès). Lectures dans `src/lib/server/boutique.ts`.

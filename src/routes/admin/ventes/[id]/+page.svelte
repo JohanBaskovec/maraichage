@@ -14,6 +14,7 @@
 	let produitChoisi = $state<number | undefined>();
 	const uniteChoisie = $derived(data.produits.find((p) => p.id === produitChoisi)?.unite);
 	const dernierCreneau = $derived(vente.creneaux.at(-1));
+	const nbCommandes = $derived(vente.creneaux.reduce((n, c) => n + c.nbCommandes, 0));
 
 	/** Les formulaires d'édition gardent leurs valeurs après envoi. */
 	const garder =
@@ -30,6 +31,16 @@
 	Commandes jusqu’au {formatDateHeure(vente.cloture)}
 	<span class="badge {vente.statut}">{STATUTS[vente.statut]}</span>
 </h1>
+
+<p class="liens">
+	<a href={resolve('/admin/ventes/[id]/commandes', { id: String(vente.id) })}>
+		Commandes ({nbCommandes})
+	</a>
+	·
+	<a href={resolve('/admin/ventes/[id]/preparation', { id: String(vente.id) })}
+		>Récap de préparation</a
+	>
+</p>
 
 <section class="carte">
 	<form method="POST" action="?/statut" use:enhance class="ligne">
@@ -262,6 +273,10 @@
 {/if}
 
 <style>
+	.liens {
+		margin: -0.5rem 0 1rem;
+		font-weight: 600;
+	}
 	h1 .badge {
 		vertical-align: middle;
 		font-size: 0.8rem;

@@ -104,7 +104,7 @@ export const creneaux = sqliteTable(
 		lieu: text('lieu').notNull(),
 		/** Nombre maximum de commandes ; null = sans limite. */
 		capacite: integer('capacite'),
-		/** Commandes actives sur ce créneau (tenu à jour avec les commandes). */
+		/** Commandes non annulées sur ce créneau (+1 à la commande, −1 à l’annulation). */
 		nbCommandes: integer('nb_commandes').notNull().default(0)
 	},
 	(t) => [

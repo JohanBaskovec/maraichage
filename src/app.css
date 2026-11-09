@@ -187,3 +187,38 @@ label {
 	clip-path: inset(50%);
 	white-space: nowrap;
 }
+
+/* Impression (récap de préparation, liste des commandes) */
+@media print {
+	:root {
+		--fond: #fff;
+		--texte: #000;
+		--discret: #333;
+		--bord: #999;
+		--carte: #fff;
+		--accent: #000;
+		--accent-doux: #fff;
+		color-scheme: light;
+	}
+	body {
+		font-size: 11pt;
+	}
+	nav,
+	.pas-imprime,
+	button {
+		display: none !important;
+	}
+	main {
+		max-width: none;
+		padding: 0;
+	}
+	.carte {
+		break-inside: avoid;
+		padding: 0.5rem 0.75rem;
+		margin-bottom: 0.5rem;
+	}
+	a {
+		color: inherit;
+		text-decoration: none;
+	}
+}
