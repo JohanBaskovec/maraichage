@@ -5,14 +5,17 @@ import { lireCommande, venteEnCours } from '#lib/server/boutique.ts';
 import { courrielConfirmation } from '#lib/server/courriels/modeles.ts';
 import { passerCommande, type Manque } from '#lib/server/commandes.ts';
 import { entier, texte } from '#lib/server/formulaire.ts';
+import { CHAMP_TURNSTILE } from '#lib/server/turnstile.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load = (async ({ locals, url }) => {
 	const vente = await venteEnCours(locals.db);
-	if (!vente) return { vente: null, recap: null, virement: false };
+	if (!vente) return { vente: null, recap: null, virement: false, turnstile: null };
 	return {
 		vente: { id: vente.id, cloture: vente.cloture, creneaux: vente.creneaux },
 		virement: locals.virement !== null,
+		/** Clé publique du widget anti-robot, `null` s'il est désactivé. */
+		turnstile: locals.turnstile?.cleSite ?? null,
 		recap: recapitulatif(vente.offres, quantitesDepuisUrl(url.searchParams))
 	};
 }) satisfies PageServerLoad;
@@ -24,8 +27,19 @@ function phraseManque(m: Manque, unite: 'piece' | 'botte' | 'kg') {
 		: `${m.produit} : épuisé.`;
 }
 
+/** Adresse IP du client (en-tête posé par Cloudflare), transmise à Turnstile. */
+function adresseClient(request: Request, getClientAddress: () => string): string | null {
+	const ip = request.headers.get('cf-connecting-ip');
+	if (ip) return ip;
+	try {
+		return getClientAddress();
+	} catch {
+		return null;
+	}
+}
+
 export const actions = {
-	commander: async ({ locals, request, url }) => {
+	commander: async ({ locals, request, url, getClientAddress }) => {
 		const form = await request.formData();
 		const saisie = {
 			nom: texte(form, 'nom'),
@@ -53,6 +67,20 @@ export const actions = {
 			const id = /^o(\d+)$/.exec(cle)?.[1];
 			if (id && typeof valeur === 'string' && /^\d+$/.test(valeur) && Number(valeur) > 0) {
 				lignes.push({ offreId: Number(id), quantite: Number(valeur) });
+			}
+		}
+
+		// Vérifiée en dernier : le jeton ne sert qu'une fois, la page en redemande un
+		// après chaque refus.
+		if (locals.turnstile) {
+			const humain = await locals.turnstile.verifier(
+				texte(form, CHAMP_TURNSTILE) || null,
+				adresseClient(request, getClientAddress)
+			);
+			if (!humain) {
+				return echec(
+					'La vérification anti-robot a échoué ou a expiré. Patientez un instant puis validez à nouveau.'
+				);
 			}
 		}
 

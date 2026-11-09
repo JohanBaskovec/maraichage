@@ -4,6 +4,7 @@ import { env } from 'cloudflare:workers';
 import { estRouteAdmin, verifierAcces } from '#lib/server/acces.ts';
 import { courrielleurResend } from '#lib/server/courriels/envoi.ts';
 import { getDb } from '#lib/server/db/index.ts';
+import { turnstile } from '#lib/server/turnstile.ts';
 import { lireCoordonneesVirement } from '#lib/virement.ts';
 
 /**
@@ -29,6 +30,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.db = getDb(env.DB);
 	event.locals.virement = lireCoordonneesVirement(env);
 	event.locals.courriels = courrielleurResend(env.RESEND_API_KEY);
+	event.locals.turnstile = turnstile(env.TURNSTILE_CLE_SITE, env.TURNSTILE_SECRET);
 
 	if (estRouteAdmin(event.route.id, event.url.pathname)) {
 		if (dev) {

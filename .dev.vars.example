@@ -10,3 +10,8 @@ VIREMENT_BIC=""
 VIREMENT_TITULAIRE="Ferme des Tests"
 
 # RESEND_API_KEY=""
+
+# Turnstile (anti-robot) : clés de test officielles de Cloudflare, toujours acceptées,
+# valables sur localhost. Sans TURNSTILE_SECRET, le widget n'est pas affiché.
+TURNSTILE_CLE_SITE="1x00000000000000000000AA"
+TURNSTILE_SECRET="1x0000000000000000000000000000000AA"

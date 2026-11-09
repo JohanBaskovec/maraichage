@@ -25,3 +25,16 @@ export async function ouvrir(page: Page, chemin: string) {
 	await page.goto(chemin);
 	await page.waitForLoadState('networkidle');
 }
+
+/**
+ * Attend que la page de validation soit prête : hydratée et vérification
+ * anti-robot (Turnstile) passée. Pas de `networkidle` ici : le widget de
+ * Cloudflare garde des connexions ouvertes.
+ */
+export async function attendreValidation(page: Page) {
+	await expect(page).toHaveURL(/\/commande\?/);
+	await expect(page.locator('.turnstile')).toHaveCount(1);
+	await expect(page.getByText('Vérification anti-robot en cours')).toHaveCount(0, {
+		timeout: 20_000
+	});
+}

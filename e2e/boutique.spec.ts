@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { ouvrir, verifierAccessibilite, verifierLargeur } from './outils';
+import { attendreValidation, ouvrir, verifierAccessibilite, verifierLargeur } from './outils';
 
 // Données : e2e/donnees-boutique.sql. Les tests s'enchaînent sur la même base.
 test.describe.configure({ mode: 'serial' });
@@ -46,7 +46,7 @@ test('un client remplit son panier, commande et reçoit sa référence', async (
 
 	await page.getByRole('link', { name: 'Valider mon panier' }).click();
 	await expect(page).toHaveURL(/\/commande\?/);
-	await page.waitForLoadState('networkidle');
+	await attendreValidation(page);
 	await expect(page.locator('table')).toContainText('Concombre');
 	await expect(page.locator('tfoot')).toContainText('5,35 €');
 	await verifierAccessibilite(page);
@@ -76,7 +76,7 @@ test('un client remplit son panier, commande et reçoit sa référence', async (
 	// Les coordonnées sont pré-remplies la fois suivante.
 	await plus(page, 'Concombre').click();
 	await page.getByRole('link', { name: 'Valider mon panier' }).click();
-	await page.waitForLoadState('networkidle');
+	await attendreValidation(page);
 	await expect(page.getByLabel('E-mail')).toHaveValue('camille@example.fr');
 });
 
@@ -102,7 +102,7 @@ test('si un autre client est plus rapide, le panier est ajusté sans perdre la s
 	await ouvrir(lent, '/');
 	for (let i = 0; i < 3; i++) await plus(lent, 'Radis').click();
 	await lent.getByRole('link', { name: 'Valider mon panier' }).click();
-	await lent.waitForLoadState('networkidle');
+	await attendreValidation(lent);
 	await remplirCoordonnees(lent, 'Lou Lent', 'lou@example.fr');
 
 	// Pendant ce temps, un autre client achète 2 radis et la dernière place du marché.
@@ -110,7 +110,7 @@ test('si un autre client est plus rapide, le panier est ajusté sans perdre la s
 	await plus(rapide, 'Radis').click();
 	await plus(rapide, 'Radis').click();
 	await rapide.getByRole('link', { name: 'Valider mon panier' }).click();
-	await rapide.waitForLoadState('networkidle');
+	await attendreValidation(rapide);
 	await remplirCoordonnees(rapide, 'Sam Rapide', 'sam@example.fr');
 	await rapide.getByText('Marché de la place').click();
 	await rapide.getByLabel(/J’ai lu et j’accepte/).check();
@@ -144,7 +144,7 @@ test('un client annule lui-même sa commande ; le stock revient', async ({ page 
 	await plus(page, 'Concombre').click();
 	await plus(page, 'Concombre').click();
 	await page.getByRole('link', { name: 'Valider mon panier' }).click();
-	await page.waitForLoadState('networkidle');
+	await attendreValidation(page);
 	await remplirCoordonnees(page, 'Alex Annule', 'alex@example.fr');
 	await page.getByText('À la ferme').click();
 	await page.getByLabel(/J’ai lu et j’accepte/).check();
@@ -171,7 +171,7 @@ test('un client paie par virement : coordonnées, libellé et date limite', asyn
 	await ouvrir(page, '/');
 	await plus(page, 'Concombre').click();
 	await page.getByRole('link', { name: 'Valider mon panier' }).click();
-	await page.waitForLoadState('networkidle');
+	await attendreValidation(page);
 	await remplirCoordonnees(page, 'Vic Virement', 'vic@example.fr');
 	await page.getByText('À la ferme').click();
 	await page.getByText('Par virement').click();

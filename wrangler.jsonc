@@ -17,7 +17,10 @@
 	// Valeurs publiques, pas des secrets. Si elles sont vides, /admin est fermé en production.
 	"vars": {
 		"ACCESS_EQUIPE": "gentle-firefly-1b6f",
-		"ACCESS_AUD": "bf61cefa894ad35999a366cbe47f3dc2adad231ca02141b64eb6a3063ba92127"
+		"ACCESS_AUD": "bf61cefa894ad35999a366cbe47f3dc2adad231ca02141b64eb6a3063ba92127",
+		// Clé publique du widget Turnstile (la clé secrète est le secret TURNSTILE_SECRET).
+		// Sans le secret, la vérification anti-robot est désactivée.
+		"TURNSTILE_CLE_SITE": "0x4AAAAAAF6Pu5DF3iNhD03X"
 	},
 	"d1_databases": [
 		{

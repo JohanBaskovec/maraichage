@@ -134,6 +134,14 @@ stock suffisant` qui modifie 0 rangée n'échouerait pas et laisserait passer
   l'interface.
 - Limite par produit et par commande (par exemple 20) et Turnstile sur le
   formulaire, pour qu'une fausse commande ne bloque pas tout le stock.
+- Turnstile (réalisé) : `src/lib/server/turnstile.ts` (vérification par
+  `siteverify`, `event.locals.turnstile`, `null` sans clé du site ou sans le
+  secret `TURNSTILE_SECRET` → pas de widget ni de contrôle) ; clé publique
+  `TURNSTILE_CLE_SITE` dans `wrangler.jsonc`. Le jeton est vérifié juste avant
+  `passerCommande` (usage unique) ; la page (`src/lib/turnstile.ts`, rendu
+  explicite) en redemande un après chaque refus. Clés de test de Cloudflare
+  dans `.dev.vars.example` et les tests de bout en bout (pas de `networkidle`
+  sur `/commande` : utiliser `attendreValidation`).
 - Un test automatisé lance 50 commandes simultanées sur un stock de 10 et
   vérifie qu'exactement 10 unités partent. Ce test existe **avant** la page de
   commande.

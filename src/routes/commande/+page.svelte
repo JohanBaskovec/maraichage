@@ -7,6 +7,7 @@
 	import { formatEuros, formatQuantite } from '#lib/format.ts';
 	import { formatDateHeure, formatJour } from '#lib/heure.ts';
 	import { chargerCoordonnees, enregistrerCoordonnees, enregistrerPanier } from '#lib/stockage.ts';
+	import { chargerTurnstile, type ApiTurnstile } from '#lib/turnstile.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -40,6 +41,54 @@
 			);
 		}
 	});
+
+	// Vérification anti-robot (Turnstile) : le widget ajoute au formulaire un jeton
+	// à usage unique ; on en redemande un après chaque refus du serveur.
+	let conteneurTurnstile = $state<HTMLElement>();
+	let apiTurnstile: ApiTurnstile | null = null;
+	let widget: string | null = null;
+	let humainVerifie = $state(false);
+	let turnstileIndisponible = $state(false);
+	// Valeur dérivée : le widget n'est pas recréé quand `data` est rechargé.
+	const cleTurnstile = $derived(data.turnstile);
+	$effect(() => {
+		const cleSite = cleTurnstile;
+		const element = conteneurTurnstile;
+		if (!cleSite || !element) return;
+		let actif = true;
+		chargerTurnstile().then(
+			(api) => {
+				if (!actif) return;
+				apiTurnstile = api;
+				widget = api.render(element, {
+					sitekey: cleSite,
+					action: 'commande',
+					language: 'fr',
+					size: 'flexible',
+					callback: () => (humainVerifie = true),
+					'expired-callback': () => (humainVerifie = false),
+					'error-callback': () => {
+						humainVerifie = false;
+					}
+				});
+			},
+			() => {
+				if (actif) turnstileIndisponible = true;
+			}
+		);
+		return () => {
+			actif = false;
+			if (apiTurnstile && widget) apiTurnstile.remove(widget);
+			widget = null;
+			humainVerifie = false;
+		};
+	});
+	function nouveauJeton() {
+		if (apiTurnstile && widget) {
+			humainVerifie = false;
+			apiTurnstile.reset(widget);
+		}
+	}
 
 	// Les quantités restent dans l'URL de l'action pour réafficher le panier après une erreur.
 	const action = $derived(`?${page.url.searchParams.toString()}&/commander`);
@@ -106,6 +155,7 @@
 				enregistrerCoordonnees({ nom, email, telephone });
 				return async ({ result, update }) => {
 					if (result.type === 'failure') {
+						nouveauJeton();
 						// Rafraîchir le panier (stock à jour) puis afficher le message.
 						await invalidateAll();
 						await applyAction(result);
@@ -203,9 +253,24 @@
 				</span>
 			</label>
 
+			{#if data.turnstile}
+				<div class="turnstile" bind:this={conteneurTurnstile}></div>
+				{#if turnstileIndisponible}
+					<p class="erreur" role="alert">
+						La vérification anti-robot n’a pas pu se charger. Vérifiez votre connexion ou désactivez
+						le bloqueur de contenu pour ce site, puis rechargez la page.
+					</p>
+				{:else if !humainVerifie}
+					<p class="discret" role="status">Vérification anti-robot en cours…</p>
+				{/if}
+			{/if}
+
 			{#if form?.message}<p class="erreur" role="alert">{form.message}</p>{/if}
 
-			<button class="grand" disabled={envoi || creneauxLibres.length === 0}>
+			<button
+				class="grand"
+				disabled={envoi || creneauxLibres.length === 0 || (!!data.turnstile && !humainVerifie)}
+			>
 				{envoi
 					? 'Envoi…'
 					: `Commander – je paierai ${formatEuros(data.recap!.totalCentimes)} ${
@@ -219,6 +284,10 @@
 <style>
 	main {
 		max-width: 40rem;
+	}
+	.turnstile {
+		margin: 1rem 0 0.5rem;
+		min-height: 65px;
 	}
 	h2 {
 		margin-top: 0;
