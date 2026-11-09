@@ -8,9 +8,10 @@ import type { Actions, PageServerLoad } from './$types';
 
 export const load = (async ({ locals, url }) => {
 	const vente = await venteEnCours(locals.db);
-	if (!vente) return { vente: null, recap: null };
+	if (!vente) return { vente: null, recap: null, virement: false };
 	return {
 		vente: { id: vente.id, cloture: vente.cloture, creneaux: vente.creneaux },
+		virement: locals.virement !== null,
 		recap: recapitulatif(vente.offres, quantitesDepuisUrl(url.searchParams))
 	};
 }) satisfies PageServerLoad;
@@ -29,13 +30,19 @@ export const actions = {
 			nom: texte(form, 'nom'),
 			email: texte(form, 'email'),
 			telephone: texte(form, 'telephone'),
-			creneau: entier(form, 'creneau')
+			creneau: entier(form, 'creneau'),
+			mode: texte(form, 'mode') === 'virement' ? ('virement' as const) : ('retrait' as const)
 		};
 		const echec = (message: string) => fail(400, { ...saisie, message });
 
 		const vente = await venteEnCours(locals.db);
 		if (!vente) return echec('La vente est terminée : les commandes ne sont plus acceptées.');
 		if (saisie.creneau === null) return echec('Choisissez un créneau de retrait.');
+		if (saisie.mode === 'virement' && !locals.virement) {
+			return echec(
+				'Le paiement par virement n’est pas disponible : choisissez le paiement au retrait.'
+			);
+		}
 		if (texte(form, 'cgv') !== 'oui') {
 			return echec('Merci d’accepter les conditions générales de vente.');
 		}
@@ -54,8 +61,7 @@ export const actions = {
 			nom: saisie.nom,
 			email: saisie.email,
 			telephone: saisie.telephone,
-			// Phase 1 : paiement au retrait uniquement.
-			modePaiement: 'retrait',
+			modePaiement: saisie.mode,
 			lignes
 		});
 

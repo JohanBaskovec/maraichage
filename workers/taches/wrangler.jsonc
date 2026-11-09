@@ -1,0 +1,25 @@
+// Worker des tâches planifiées (Cron Triggers), séparé du site : l'adaptateur
+// SvelteKit ne gère pas les tâches planifiées. Même base D1 que le site.
+// Déployé par `npm run deploy:taches` (voir README).
+{
+	"$schema": "../../node_modules/wrangler/config-schema.json",
+	"name": "maraichage-taches",
+	"main": "index.ts",
+	"compatibility_date": "2026-11-08",
+	// Pas de page web : uniquement des tâches planifiées.
+	"workers_dev": false,
+	"preview_urls": false,
+	"triggers": {
+		// Toutes les 15 minutes : expiration des virements non reçus.
+		"crons": ["*/15 * * * *"]
+	},
+	"observability": { "enabled": true },
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "maraichage",
+			"database_id": "95d2921a-6bfe-442f-a5da-d987240e12ef",
+			"migrations_dir": "../../drizzle"
+		}
+	]
+}

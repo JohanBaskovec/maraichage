@@ -15,6 +15,13 @@
       "when": 1794211895956,
       "tag": "0001_absence_excusee",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794214070957,
+      "tag": "0002_paiement_avant",
+      "breakpoints": true
     }
   ]
 }

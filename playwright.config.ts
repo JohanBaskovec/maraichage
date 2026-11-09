@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Lancer avec `npm run test:e2e` (qui fait le build avant). Deux serveurs, chacun avec sa base locale recréée à chaque lancement :
-// - « production » : le build réel servi par wrangler (boutique, sécurité) ;
+// - « production » : le build réel servi par wrangler (boutique, sécurité),
+//   avec un IBAN fictif pour le virement ;
 //   /admin y est fermé faute de jeton Cloudflare Access, comme en ligne ;
 // - « développement » : vite dev, où /admin est ouvert (tests du back-office).
 const PROD = 'http://localhost:4180';
@@ -31,7 +32,7 @@ export default defineConfig({
 	webServer: [
 		{
 			command:
-				'node e2e/preparer-base.mjs .wrangler/e2e-prod e2e/donnees-boutique.sql && npx wrangler dev --port 4180 --persist-to .wrangler/e2e-prod',
+				'node e2e/preparer-base.mjs .wrangler/e2e-prod e2e/donnees-boutique.sql && npx wrangler dev --port 4180 --persist-to .wrangler/e2e-prod --var VIREMENT_IBAN:FR7630006000011234567890189 --var "VIREMENT_TITULAIRE:Ferme des Tests"',
 			url: PROD,
 			timeout: 180_000,
 			reuseExistingServer: false,

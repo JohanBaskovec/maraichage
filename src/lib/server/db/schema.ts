@@ -133,6 +133,8 @@ export const commandes = sqliteTable(
 		modePaiement: text('mode_paiement', { enum: MODES_PAIEMENT }).notNull(),
 		statut: text('statut', { enum: STATUTS_COMMANDE }).notNull(),
 		payee: integer('payee', { mode: 'boolean' }).notNull().default(false),
+		/** Virement : date limite de paiement, après laquelle la commande est annulée. */
+		paiementAvant: integer('paiement_avant', { mode: 'timestamp_ms' }),
 		/**
 		 * Commande non récupérée que le maraîcher a pardonnée (« Débloquer ») :
 		 * elle ne compte plus pour le blocage du client.
@@ -146,6 +148,7 @@ export const commandes = sqliteTable(
 		index('commandes_vente_creneau').on(t.venteId, t.creneauId),
 		index('commandes_email').on(t.email),
 		index('commandes_telephone').on(t.telephone),
+		index('commandes_statut_paiement_avant').on(t.statut, t.paiementAvant),
 		check('commandes_mode_paiement_valide', sql`${t.modePaiement} in ('retrait', 'virement')`),
 		check(
 			'commandes_statut_valide',

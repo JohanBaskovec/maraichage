@@ -98,3 +98,22 @@ describe('actions', () => {
 		});
 	});
 });
+
+describe('action paiement (virement reçu)', () => {
+	it('refuse une commande qui n’attend pas de paiement', async () => {
+		expect(await actions.paiement(page({ commande: commandeId }))).toMatchObject({
+			status: 400,
+			data: { message: 'Cette commande n’attend pas de paiement.' }
+		});
+	});
+
+	it('confirme un virement attendu', async () => {
+		await db
+			.update(commandes)
+			.set({ statut: 'en_attente_paiement', modePaiement: 'virement' })
+			.where(eq(commandes.id, commandeId));
+		expect(await actions.paiement(page({ commande: commandeId }))).toBeUndefined();
+		const [c] = await db.select().from(commandes).where(eq(commandes.id, commandeId));
+		expect(c).toMatchObject({ statut: 'confirmee', payee: true });
+	});
+});

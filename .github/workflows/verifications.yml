@@ -39,6 +39,9 @@ jobs:
       - name: Tests unitaires et d'intégration (D1 locale)
         run: npm test
 
+      - name: Worker des tâches planifiées (compilation)
+        run: npm run taches:verifier
+
       - name: Schéma et migrations synchronisés
         run: |
           npx drizzle-kit generate

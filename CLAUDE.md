@@ -150,6 +150,16 @@ stock suffisant` qui modifie 0 rangée n'échouerait pas et laisserait passer
 - **Expiration** : un Worker séparé (Cron Trigger) annule les virements non
   reçus après un délai (par exemple 24 h, ou la veille du retrait si c'est plus
   tôt) et libère le stock.
+- Réalisé : `commandes.paiement_avant` = min(commande + 24 h, début du retrait −
+  24 h) (`limitePaiementVirement`) ; virement refusé s'il reste moins de 2 h pour
+  payer. Worker `workers/taches/` (cron toutes les 15 min, `expirerVirements`) :
+  n'annule que le statut `en_attente_paiement` (`annulerCommande(db, id,
+['en_attente_paiement'])`), jamais une commande validée entre-temps. Bouton
+  « Paiement reçu » (`confirmerPaiement`) : `confirmee` + payée.
+- Coordonnées bancaires : secrets `VIREMENT_IBAN`, `VIREMENT_TITULAIRE`,
+  `VIREMENT_BIC` (déclarés dans `src/secrets.d.ts`), lus par le hook dans
+  `event.locals.virement` (`null` si absents ou IBAN invalide → virement non
+  proposé). En local : `.dev.vars` (voir `.dev.vars.example`).
 - Option : QR code de virement au format EPC, toujours avec l'IBAN en clair à
   côté.
 

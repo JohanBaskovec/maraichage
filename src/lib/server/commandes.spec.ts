@@ -4,7 +4,9 @@ import {
 	annulerCommande,
 	annulerParClient,
 	estBloque,
+	expirerVirements,
 	limiteAnnulation,
+	limitePaiementVirement,
 	passerCommande,
 	type CommandeDemandee
 } from './commandes.ts';
@@ -419,5 +421,143 @@ describe('annulation par le client (lien avec jeton)', () => {
 		expect(await annulerParClient(db, r.jetonAnnulation, AVANT)).toBe('deja_terminee');
 		expect(await annulerParClient(db, 'jeton-inconnu', AVANT)).toBe('introuvable');
 		expect(await annulerParClient(db, r.id, AVANT)).toBe('introuvable');
+	});
+});
+
+describe('virement', () => {
+	// Créneau du samedi 14 novembre à 9 h, heure de Paris (8 h UTC).
+	const creneau = { date: '2026-11-14', heureDebut: '09:00' };
+
+	it('laisse 24 h pour payer, ou jusqu’à la veille du retrait si c’est plus tôt', () => {
+		expect(limitePaiementVirement(new Date('2026-11-10T10:00:00Z'), creneau).toISOString()).toBe(
+			'2026-11-11T10:00:00.000Z'
+		);
+		// Commande le jeudi soir : la veille du retrait (vendredi 9 h) arrive avant 24 h.
+		expect(limitePaiementVirement(new Date('2026-11-12T19:00:00Z'), creneau).toISOString()).toBe(
+			'2026-11-13T08:00:00.000Z'
+		);
+	});
+
+	it('enregistre la date limite et met la commande en attente de paiement', async () => {
+		const r = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 2 }], { modePaiement: 'virement' }),
+			MAINTENANT
+		);
+		if (!r.ok) throw new Error();
+		const [c] = await db.select().from(commandes).where(eq(commandes.id, r.id));
+		expect(c).toMatchObject({ statut: 'en_attente_paiement', payee: false });
+		expect(c.paiementAvant?.toISOString()).toBe('2026-11-11T10:00:00.000Z');
+		// Au retrait : pas de date limite.
+		const r2 = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 1 }]),
+			MAINTENANT
+		);
+		if (!r2.ok) throw new Error();
+		const [c2] = await db.select().from(commandes).where(eq(commandes.id, r2.id));
+		expect(c2.paiementAvant).toBeNull();
+	});
+
+	it('refuse le virement quand le retrait est trop proche pour payer', async () => {
+		// Retrait le vendredi 13 à 20 h (Paris) : la « veille » (jeudi 20 h) est presque là.
+		const [proche] = await db
+			.insert(creneaux)
+			.values({
+				venteId,
+				date: '2026-11-13',
+				heureDebut: '20:00',
+				heureFin: '21:00',
+				lieu: 'Ferme'
+			})
+			.returning();
+		const r = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 1 }], {
+				modePaiement: 'virement',
+				creneauId: proche.id
+			}),
+			new Date('2026-11-12T18:00:00Z')
+		);
+		expect(r).toMatchObject({
+			ok: false,
+			erreur: 'saisie_invalide',
+			message: expect.stringContaining('trop proche')
+		});
+		expect(await reserve(concombres)).toBe(0);
+		// Au retrait, la même commande passe.
+		expect(
+			(
+				await passerCommande(
+					db,
+					demande([{ offreId: concombres, quantite: 1 }], { creneauId: proche.id }),
+					new Date('2026-11-12T18:00:00Z')
+				)
+			).ok
+		).toBe(true);
+	});
+
+	it('annule les virements non reçus à temps et remet le stock en vente', async () => {
+		const enRetard = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 3 }], { modePaiement: 'virement' }),
+			MAINTENANT
+		);
+		const aTemps = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 2 }], { modePaiement: 'virement' }),
+			new Date('2026-11-10T20:00:00Z')
+		);
+		const recu = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 1 }], { modePaiement: 'virement' }),
+			MAINTENANT
+		);
+		const auRetrait = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 1 }]),
+			MAINTENANT
+		);
+		if (!enRetard.ok || !aTemps.ok || !recu.ok || !auRetrait.ok) throw new Error();
+		// Le maraîcher a reçu ce virement-là.
+		await db
+			.update(commandes)
+			.set({ statut: 'confirmee', payee: true })
+			.where(eq(commandes.id, recu.id));
+		expect(await reserve(concombres)).toBe(7);
+
+		// Le 11 à 15 h UTC : seul le premier virement (limite 10 h) est en retard.
+		expect(await expirerVirements(db, new Date('2026-11-11T15:00:00Z'))).toEqual([
+			enRetard.reference
+		]);
+		const statuts = Object.fromEntries(
+			(await db.select().from(commandes)).map((c) => [c.id, c.statut])
+		);
+		expect(statuts).toEqual({
+			[enRetard.id]: 'annulee',
+			[aTemps.id]: 'en_attente_paiement',
+			[recu.id]: 'confirmee',
+			[auRetrait.id]: 'confirmee'
+		});
+		expect(await reserve(concombres)).toBe(4);
+
+		// Deuxième passage : rien de plus.
+		expect(await expirerVirements(db, new Date('2026-11-11T15:00:00Z'))).toEqual([]);
+		expect(await reserve(concombres)).toBe(4);
+	});
+
+	it('n’annule jamais une commande confirmée entre la lecture et l’annulation', async () => {
+		const r = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 3 }], { modePaiement: 'virement' }),
+			MAINTENANT
+		);
+		if (!r.ok) throw new Error();
+		await db.update(commandes).set({ statut: 'confirmee', payee: true });
+		// Même si on tente de l'annuler « comme un virement expiré »…
+		expect(await annulerCommande(db, r.id, ['en_attente_paiement'])).toBe(false);
+		const [c] = await db.select().from(commandes);
+		expect(c.statut).toBe('confirmee');
+		expect(await reserve(concombres)).toBe(3);
 	});
 });

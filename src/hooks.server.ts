@@ -3,6 +3,7 @@ import { dev } from '$app/env';
 import { env } from 'cloudflare:workers';
 import { estRouteAdmin, verifierAcces } from '#lib/server/acces.ts';
 import { getDb } from '#lib/server/db/index.ts';
+import { lireCoordonneesVirement } from '#lib/virement.ts';
 
 /**
  * En-têtes ajoutés à toutes les réponses :
@@ -25,6 +26,7 @@ function avecEnTetes(reponse: Response): Response {
 
 export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.db = getDb(env.DB);
+	event.locals.virement = lireCoordonneesVirement(env);
 
 	if (estRouteAdmin(event.route.id, event.url.pathname)) {
 		if (dev) {

@@ -15,3 +15,10 @@ export const ABSENCES_AVANT_BLOCAGE = 2;
 
 /** Le client peut annuler lui-même sa commande jusqu'à ce délai avant le début du retrait. */
 export const ANNULATION_HEURES_AVANT_RETRAIT = 12;
+
+/** Virement : délai pour payer après la commande… */
+export const DELAI_VIREMENT_HEURES = 24;
+/** …et au plus tard ce délai avant le début du retrait (« la veille »). */
+export const VIREMENT_HEURES_AVANT_RETRAIT = 24;
+/** En dessous de ce délai pour payer, le virement n'est pas proposé (retrait trop proche). */
+export const VIREMENT_DELAI_MINIMUM_HEURES = 2;

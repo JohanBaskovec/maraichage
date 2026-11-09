@@ -1,8 +1,11 @@
-import { and, count, eq, inArray, or, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, lte, or, sql } from 'drizzle-orm';
 import {
 	ABSENCES_AVANT_BLOCAGE,
 	ANNULATION_HEURES_AVANT_RETRAIT,
-	MAX_PAS_PAR_PRODUIT
+	DELAI_VIREMENT_HEURES,
+	MAX_PAS_PAR_PRODUIT,
+	VIREMENT_DELAI_MINIMUM_HEURES,
+	VIREMENT_HEURES_AVANT_RETRAIT
 } from '#lib/config.ts';
 import { depuisChampParis } from '#lib/heure.ts';
 import { prixLigneCentimes } from '#lib/prix.ts';
@@ -15,7 +18,8 @@ import {
 	produits,
 	STATUTS_ACTIFS,
 	ventes,
-	type ModePaiement
+	type ModePaiement,
+	type StatutCommande
 } from './db/schema.ts';
 import { genererJetonAnnulation, genererReference } from './jetons.ts';
 
@@ -121,7 +125,7 @@ export async function passerCommande(
 
 	// 4. Créneau de cette vente
 	const [creneau] = await db
-		.select({ id: creneaux.id })
+		.select({ id: creneaux.id, date: creneaux.date, heureDebut: creneaux.heureDebut })
 		.from(creneaux)
 		.where(and(eq(creneaux.id, demande.creneauId), eq(creneaux.venteId, vente.id)));
 	if (!creneau) return invalide('Créneau de retrait inconnu.');
@@ -155,7 +159,17 @@ export async function passerCommande(
 	}
 
 	// 6. Écriture atomique
-	const statut = demande.modePaiement === 'retrait' ? 'confirmee' : 'en_attente_paiement';
+	let statut: 'confirmee' | 'en_attente_paiement' = 'confirmee';
+	let paiementAvant: Date | null = null;
+	if (demande.modePaiement === 'virement') {
+		statut = 'en_attente_paiement';
+		paiementAvant = limitePaiementVirement(maintenant, creneau);
+		if (paiementAvant.getTime() - maintenant.getTime() < VIREMENT_DELAI_MINIMUM_HEURES * 3600_000) {
+			return invalide(
+				'Le retrait est trop proche pour payer par virement : choisissez le paiement au retrait.'
+			);
+		}
+	}
 	for (let tentative = 1; ; tentative++) {
 		const id = crypto.randomUUID();
 		const reference = genererReference();
@@ -174,6 +188,7 @@ export async function passerCommande(
 					statut,
 					totalCentimes,
 					creeLe: maintenant,
+					paiementAvant,
 					jetonAnnulation
 				}),
 				db
@@ -241,8 +256,12 @@ async function manques(db: Db, lignes: LigneDemandee[]): Promise<Manque[]> {
  * commande, et le changement de statut vient en dernier dans le même lot.
  * Renvoie `false` si la commande n'existe pas ou n'était plus active.
  */
-export async function annulerCommande(db: Db, commandeId: string): Promise<boolean> {
-	const active = and(eq(commandes.id, commandeId), inArray(commandes.statut, STATUTS_ACTIFS));
+export async function annulerCommande(
+	db: Db,
+	commandeId: string,
+	statutsAnnulables: readonly StatutCommande[] = STATUTS_ACTIFS
+): Promise<boolean> {
+	const active = and(eq(commandes.id, commandeId), inArray(commandes.statut, statutsAnnulables));
 	const encoreActive = sql`exists (select 1 from ${commandes} where ${active})`;
 
 	const [, , changement] = await db.batch([
@@ -304,9 +323,7 @@ export async function estBloque(db: Db, email: string, telephone: string): Promi
 
 /** Début du créneau de retrait (heure de Paris) moins le délai d'annulation. */
 export function limiteAnnulation(creneau: { date: string; heureDebut: string }): Date {
-	const debut = depuisChampParis(`${creneau.date}T${creneau.heureDebut}`);
-	if (!debut) throw new Error(`Créneau illisible : ${creneau.date} ${creneau.heureDebut}`);
-	return new Date(debut.getTime() - ANNULATION_HEURES_AVANT_RETRAIT * 3600_000);
+	return new Date(debutRetrait(creneau).getTime() - ANNULATION_HEURES_AVANT_RETRAIT * 3600_000);
 }
 
 export type ResultatAnnulationClient = 'annulee' | 'introuvable' | 'deja_terminee' | 'trop_tard';
@@ -335,4 +352,48 @@ export async function annulerParClient(
 	if (!(STATUTS_ACTIFS as readonly string[]).includes(c.statut)) return 'deja_terminee';
 	if (maintenant >= limiteAnnulation(c)) return 'trop_tard';
 	return (await annulerCommande(db, c.id)) ? 'annulee' : 'deja_terminee';
+}
+
+/** Début du créneau de retrait, à l'heure de Paris. */
+function debutRetrait(creneau: { date: string; heureDebut: string }): Date {
+	const debut = depuisChampParis(`${creneau.date}T${creneau.heureDebut}`);
+	if (!debut) throw new Error(`Créneau illisible : ${creneau.date} ${creneau.heureDebut}`);
+	return debut;
+}
+
+/**
+ * Date limite pour payer un virement : `DELAI_VIREMENT_HEURES` après la commande,
+ * ou `VIREMENT_HEURES_AVANT_RETRAIT` avant le début du retrait si c'est plus tôt.
+ */
+export function limitePaiementVirement(
+	commandeLe: Date,
+	creneau: { date: string; heureDebut: string }
+): Date {
+	return new Date(
+		Math.min(
+			commandeLe.getTime() + DELAI_VIREMENT_HEURES * 3600_000,
+			debutRetrait(creneau).getTime() - VIREMENT_HEURES_AVANT_RETRAIT * 3600_000
+		)
+	);
+}
+
+/**
+ * Annule les commandes par virement dont le paiement n'est pas arrivé à temps
+ * et remet leur stock en vente. Lancé régulièrement par le Worker des tâches
+ * planifiées. Une commande validée entre-temps (« paiement reçu ») n'est jamais
+ * annulée : l'annulation ne vise que le statut `en_attente_paiement`.
+ * Renvoie les références annulées.
+ */
+export async function expirerVirements(db: Db, maintenant: Date = new Date()): Promise<string[]> {
+	const expirees = await db
+		.select({ id: commandes.id, reference: commandes.reference })
+		.from(commandes)
+		.where(
+			and(eq(commandes.statut, 'en_attente_paiement'), lte(commandes.paiementAvant, maintenant))
+		);
+	const annulees: string[] = [];
+	for (const c of expirees) {
+		if (await annulerCommande(db, c.id, ['en_attente_paiement'])) annulees.push(c.reference);
+	}
+	return annulees;
 }

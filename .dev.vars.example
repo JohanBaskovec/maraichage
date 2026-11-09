@@ -1,3 +1,12 @@
 # Secrets locaux pour `npm run dev` / `npm run preview` (copier en .dev.vars, jamais commité).
-# En production, ils se définissent dans le dashboard Cloudflare ou avec `npx wrangler secret put`.
+# En production, ils se définissent dans le tableau de bord Cloudflare (Worker
+# « maraichage » → Settings → Variables and Secrets, type « Secret ») ou avec
+# `npx wrangler secret put NOM`.
+
+# Paiement par virement (sans ces deux valeurs, seul le paiement au retrait est proposé).
+# IBAN d'exemple ci-dessous : fictif, ne pas utiliser en production.
+VIREMENT_IBAN="FR7630006000011234567890189"
+VIREMENT_BIC=""
+VIREMENT_TITULAIRE="Ferme des Tests"
+
 # RESEND_API_KEY=""

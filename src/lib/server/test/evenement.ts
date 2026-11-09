@@ -1,3 +1,4 @@
+import type { CoordonneesVirement } from '#lib/virement.ts';
 import type { Db } from '../db/index.ts';
 
 /**
@@ -6,13 +7,18 @@ import type { Db } from '../db/index.ts';
  */
 export function evenement(
 	db: Db,
-	options: { url?: string; params?: Record<string, string>; form?: Record<string, string> } = {}
+	options: {
+		url?: string;
+		params?: Record<string, string>;
+		form?: Record<string, string>;
+		virement?: CoordonneesVirement | null;
+	} = {}
 ) {
 	const url = new URL(options.url ?? 'http://localhost/');
 	const corps = new FormData();
 	for (const [cle, valeur] of Object.entries(options.form ?? {})) corps.append(cle, valeur);
 	return {
-		locals: { db },
+		locals: { db, virement: options.virement ?? null },
 		url,
 		params: options.params ?? {},
 		request: new Request(url, { method: 'POST', body: corps }),

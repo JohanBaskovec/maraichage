@@ -11,6 +11,7 @@ import {
 import {
 	annulerCommandeVente,
 	changerStatutCommande,
+	confirmerPaiement,
 	listerCommandes,
 	debloquerClient,
 	listerClientsBloques,
@@ -319,5 +320,51 @@ describe('commandes non récupérées et clients bloqués', () => {
 			['telephone', '0633333333']
 		]);
 		expect(await debloquerClient(db, '0633333333')).toBe(2);
+	});
+});
+
+describe('confirmerPaiement (virement reçu)', () => {
+	async function parVirement() {
+		const r = await passerCommande(
+			db,
+			{
+				venteId,
+				creneauId: matin,
+				nom: 'Vic',
+				email: 'vic@example.fr',
+				telephone: '0612345678',
+				modePaiement: 'virement',
+				lignes: [{ offreId: concombre, quantite: 2 }]
+			},
+			PENDANT
+		);
+		if (!r.ok) throw new Error(JSON.stringify(r));
+		return r;
+	}
+
+	it('passe la commande à retirer et payée', async () => {
+		const c = await parVirement();
+		expect((await statut(c.id)).statut).toBe('en_attente_paiement');
+		expect(await confirmerPaiement(db, venteId, c.id)).toEqual({ ok: true });
+		expect(await statut(c.id)).toMatchObject({ statut: 'confirmee', payee: true });
+		expect(await confirmerPaiement(db, venteId, c.id)).toMatchObject({ ok: false });
+	});
+
+	it('prévient si la commande a déjà expiré', async () => {
+		const c = await parVirement();
+		await annulerCommandeVente(db, venteId, c.id);
+		expect(await confirmerPaiement(db, venteId, c.id)).toMatchObject({
+			ok: false,
+			message: expect.stringContaining('Rembourse le client')
+		});
+		expect((await statut(c.id)).statut).toBe('annulee');
+	});
+
+	it('refuse une commande d’une autre vente', async () => {
+		const c = await parVirement();
+		expect(await confirmerPaiement(db, autreVente, c.id)).toEqual({
+			ok: false,
+			message: 'Commande introuvable.'
+		});
 	});
 });

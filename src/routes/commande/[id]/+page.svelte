@@ -14,6 +14,17 @@
 	$effect(() => {
 		viderPanier(c.venteId);
 	});
+
+	let copie = $state<string | null>(null);
+	async function copier(quoi: string, texte: string) {
+		try {
+			await navigator.clipboard.writeText(texte.replace(/\s/g, ''));
+			copie = quoi;
+			setTimeout(() => (copie = null), 2000);
+		} catch {
+			// Presse-papiers indisponible : le texte reste sélectionnable.
+		}
+	}
 </script>
 
 <svelte:head>
@@ -29,6 +40,57 @@
 		<p>Merci, et à bientôt !</p>
 	{:else}
 		<h1>Merci {c.nom.split(' ')[0]}, votre commande est enregistrée</h1>
+	{/if}
+
+	{#if c.statut === 'en_attente_paiement' && c.paiementAvant}
+		<section class="carte virement" aria-labelledby="titre-virement">
+			<h2 id="titre-virement">
+				À payer par virement avant le {formatDateHeure(c.paiementAvant)}
+			</h2>
+			{#if data.virement}
+				<dl>
+					<dt>Montant</dt>
+					<dd><strong>{formatEuros(c.totalCentimes)}</strong></dd>
+					<dt>Bénéficiaire</dt>
+					<dd>{data.virement.titulaire}</dd>
+					<dt>IBAN</dt>
+					<dd>
+						<code>{data.virement.iban}</code>
+						<button
+							type="button"
+							class="secondaire copier"
+							onclick={() => copier('iban', data.virement!.iban)}
+						>
+							{copie === 'iban' ? 'Copié' : 'Copier'}
+						</button>
+					</dd>
+					{#if data.virement.bic}
+						<dt>BIC</dt>
+						<dd><code>{data.virement.bic}</code></dd>
+					{/if}
+					<dt>Libellé du virement</dt>
+					<dd>
+						<code>{c.reference}</code>
+						<button
+							type="button"
+							class="secondaire copier"
+							onclick={() => copier('reference', c.reference)}
+						>
+							{copie === 'reference' ? 'Copié' : 'Copier'}
+						</button>
+					</dd>
+				</dl>
+				<p class="discret">
+					Indiquez bien la référence <strong>{c.reference}</strong> dans le libellé. Sans virement reçu
+					à temps, la commande est annulée automatiquement et les produits remis en vente.
+				</p>
+			{:else}
+				<p class="avert">
+					Les coordonnées bancaires sont momentanément indisponibles : contactez-nous pour régler
+					votre commande.
+				</p>
+			{/if}
+		</section>
 	{/if}
 
 	<section class="carte reference">
@@ -50,6 +112,8 @@
 			<p class="discret">
 				{#if c.modePaiement === 'retrait'}
 					Paiement au retrait, en espèces ou par chèque.
+				{:else if c.payee}
+					Virement reçu, merci.
 				{/if}
 			</p>
 		</section>
@@ -95,6 +159,36 @@
 	}
 	h2 {
 		margin-top: 0;
+	}
+	.virement {
+		border-color: var(--accent);
+	}
+	dl {
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 0.4rem 0.75rem;
+		margin: 0.75rem 0;
+		align-items: center;
+	}
+	dt {
+		color: var(--discret);
+		font-size: 0.9rem;
+	}
+	dd {
+		margin: 0;
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+	code {
+		font-size: 0.95rem;
+		/* À la ligne entre les groupes de 4, jamais au milieu. */
+		overflow-wrap: break-word;
+	}
+	.copier {
+		padding: 0.15rem 0.6rem;
+		font-size: 0.85rem;
 	}
 	.reference {
 		display: grid;

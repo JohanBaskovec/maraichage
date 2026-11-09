@@ -3,6 +3,7 @@ import { lireVente } from '#lib/server/admin.ts';
 import {
 	annulerCommandeVente,
 	changerStatutCommande,
+	confirmerPaiement,
 	FILTRES_STATUT,
 	listerCommandes,
 	marquerPayee,
@@ -66,6 +67,11 @@ export const actions = {
 			commande,
 			texte(form, 'payee') === '1'
 		);
+		if (!r.ok) return echec(commande, r.message);
+	},
+	paiement: async ({ locals, params, request }) => {
+		const commande = texte(await request.formData(), 'commande');
+		const r = await confirmerPaiement(locals.db, idVente(params), commande);
 		if (!r.ok) return echec(commande, r.message);
 	},
 	statut: async ({ locals, params, request }) => {

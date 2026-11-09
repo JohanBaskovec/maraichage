@@ -20,6 +20,10 @@
 	let email = $state('');
 	let telephone = $state('');
 	let envoi = $state(false);
+	let mode = $state<'retrait' | 'virement'>('retrait');
+	$effect(() => {
+		if (form?.mode) mode = form.mode;
+	});
 
 	$effect(() => {
 		// Valeurs renvoyées après une erreur, sinon coordonnées mémorisées dans ce navigateur.
@@ -159,11 +163,36 @@
 						</label>
 					{/each}
 				</fieldset>
-				<p class="discret">
-					Paiement au retrait, en espèces ou par chèque. Commandes jusqu’au {formatDateHeure(
-						data.vente.cloture
-					)}.
-				</p>
+				<p class="discret">Commandes jusqu’au {formatDateHeure(data.vente.cloture)}.</p>
+			</section>
+
+			<section class="carte">
+				<h2>Paiement</h2>
+				{#if data.virement}
+					<fieldset>
+						<legend class="visuellement-cache">Mode de paiement</legend>
+						<label class="choix">
+							<input type="radio" name="mode" value="retrait" bind:group={mode} />
+							<span>
+								<strong>Au retrait</strong>
+								<br /><span class="discret">En espèces ou par chèque.</span>
+							</span>
+						</label>
+						<label class="choix">
+							<input type="radio" name="mode" value="virement" bind:group={mode} />
+							<span>
+								<strong>Par virement</strong>
+								<br /><span class="discret">
+									Coordonnées bancaires affichées après la commande. Sans paiement dans les délais,
+									la commande est annulée.
+								</span>
+							</span>
+						</label>
+					</fieldset>
+				{:else}
+					<input type="hidden" name="mode" value="retrait" />
+					<p>Au retrait, en espèces ou par chèque.</p>
+				{/if}
 			</section>
 
 			<label class="choix cgv">
@@ -179,7 +208,9 @@
 			<button class="grand" disabled={envoi || creneauxLibres.length === 0}>
 				{envoi
 					? 'Envoi…'
-					: `Commander – je paierai ${formatEuros(data.recap!.totalCentimes)} au retrait`}
+					: `Commander – je paierai ${formatEuros(data.recap!.totalCentimes)} ${
+							mode === 'virement' ? 'par virement' : 'au retrait'
+						}`}
 			</button>
 		</form>
 	{/if}

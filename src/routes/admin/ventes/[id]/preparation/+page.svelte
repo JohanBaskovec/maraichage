@@ -87,7 +87,11 @@
 						{/each}
 					</ul>
 					<p class="paiement">
-						{f.payee ? 'Payée' : `À encaisser : ${formatEuros(f.totalCentimes)}`}
+						{f.payee
+							? 'Payée'
+							: f.statut === 'en_attente_paiement'
+								? `Virement attendu : ${formatEuros(f.totalCentimes)}`
+								: `À encaisser : ${formatEuros(f.totalCentimes)}`}
 					</p>
 				</article>
 			{/each}

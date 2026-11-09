@@ -86,6 +86,14 @@
 			<br />
 			<a href="tel:{c.telephone}">{c.telephone.replace(/(\d{2})(?=\d)/g, '$1 ')}</a> ·
 			<a href="mailto:{c.email}">{c.email}</a>
+			{#if c.statut === 'en_attente_paiement' && c.paiementAvant}
+				<br /><strong class="attente">
+					Virement attendu avant le {formatDateHeure(c.paiementAvant)} (libellé {c.reference}),
+					sinon annulation automatique.
+				</strong>
+			{:else if c.modePaiement === 'virement'}
+				<br />Paiement par virement.
+			{/if}
 		</p>
 		<ul class="lignes">
 			{#each c.lignes as l (l.produit)}
@@ -104,13 +112,20 @@
 
 		{#if c.statut !== 'annulee'}
 			<div class="actions pas-imprime">
-				<form method="POST" action="?/payee" use:enhance>
-					<input type="hidden" name="commande" value={c.id} />
-					<input type="hidden" name="payee" value={c.payee ? '0' : '1'} />
-					<button class={c.payee ? 'secondaire' : ''}>
-						{c.payee ? 'Annuler le paiement' : 'Payée'}
-					</button>
-				</form>
+				{#if c.statut === 'en_attente_paiement'}
+					<form method="POST" action="?/paiement" use:enhance>
+						<input type="hidden" name="commande" value={c.id} />
+						<button>Paiement reçu</button>
+					</form>
+				{:else}
+					<form method="POST" action="?/payee" use:enhance>
+						<input type="hidden" name="commande" value={c.id} />
+						<input type="hidden" name="payee" value={c.payee ? '0' : '1'} />
+						<button class={c.payee ? 'secondaire' : ''}>
+							{c.payee ? 'Annuler le paiement' : 'Payée'}
+						</button>
+					</form>
+				{/if}
 				<form method="POST" action="?/statut" use:enhance class="ligne">
 					<input type="hidden" name="commande" value={c.id} />
 					{#if c.statut === 'confirmee'}
@@ -197,6 +212,12 @@
 	.badge.statut-annulee {
 		border-color: var(--erreur);
 		color: var(--erreur);
+	}
+	.attente {
+		font-weight: 600;
+	}
+	.badge.statut-en_attente_paiement {
+		background: var(--avert-fond);
 	}
 	.terminee {
 		opacity: 0.75;

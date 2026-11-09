@@ -106,6 +106,8 @@ async function lireCommandeOu(db: Db, condition: SQL) {
 			totalCentimes: commandes.totalCentimes,
 			venteId: commandes.venteId,
 			jetonAnnulation: commandes.jetonAnnulation,
+			paiementAvant: commandes.paiementAvant,
+			payee: commandes.payee,
 			creneau: {
 				date: creneaux.date,
 				heureDebut: creneaux.heureDebut,

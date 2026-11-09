@@ -67,6 +67,7 @@ export async function listerCommandes(db: Db, venteId: number, filtres: FiltresC
 			modePaiement: commandes.modePaiement,
 			statut: commandes.statut,
 			payee: commandes.payee,
+			paiementAvant: commandes.paiementAvant,
 			totalCentimes: commandes.totalCentimes,
 			creeLe: commandes.creeLe,
 			creneau: {
@@ -206,6 +207,42 @@ export async function changerStatutCommande(
 	return actuelle
 		? { ok: false, message: 'Ce changement n’est pas possible pour cette commande.' }
 		: INTROUVABLE;
+}
+
+/**
+ * Virement reçu (ou paiement autrement) pour une commande en attente de
+ * paiement : elle devient « à retirer » et payée. Sans effet si la commande a
+ * déjà été annulée, par exemple par l'expiration automatique.
+ */
+export async function confirmerPaiement(
+	db: Db,
+	venteId: number,
+	commandeId: string
+): Promise<ResultatSuivi> {
+	const modifiees = await db
+		.update(commandes)
+		.set({ statut: 'confirmee', payee: true })
+		.where(
+			and(
+				eq(commandes.id, commandeId),
+				eq(commandes.venteId, venteId),
+				eq(commandes.statut, 'en_attente_paiement')
+			)
+		)
+		.returning({ id: commandes.id });
+	if (modifiees.length === 1) return { ok: true };
+	const [actuelle] = await db
+		.select({ statut: commandes.statut })
+		.from(commandes)
+		.where(and(eq(commandes.id, commandeId), eq(commandes.venteId, venteId)));
+	if (!actuelle) return INTROUVABLE;
+	return {
+		ok: false,
+		message:
+			actuelle.statut === 'annulee'
+				? 'Cette commande a été annulée (paiement non reçu à temps) : son stock a été remis en vente. Rembourse le client ou recrée sa commande.'
+				: 'Cette commande n’attend pas de paiement.'
+	};
 }
 
 /** Marque une commande (non annulée) comme payée ou non payée. */

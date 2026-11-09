@@ -20,6 +20,12 @@ let concombre: number;
 let radis: number;
 let creneau: number;
 
+const VIREMENT = {
+	iban: 'FR76 3000 6000 0112 3456 7890 189',
+	bic: null,
+	titulaire: 'Ferme des Tests'
+};
+
 beforeEach(async () => {
 	({ db, fermer } = await baseDeTest());
 	const a = await creerProduit(db, { nom: 'Concombre', unite: 'piece', pas: 1 });
@@ -62,6 +68,11 @@ const formulaire = (autres: Record<string, string> = {}) => ({
 });
 
 describe('load', () => {
+	it('indique si le virement est proposé', async () => {
+		expect((await load(evenement(db))).virement).toBe(false);
+		expect((await load(evenement(db, { virement: VIREMENT }))).virement).toBe(true);
+	});
+
 	it('recalcule le panier de l’URL avec les prix du serveur', async () => {
 		const data = await load(
 			evenement(db, { url: `http://localhost/commande?o${concombre}=3&o${radis}=4` })
@@ -76,12 +87,35 @@ describe('load', () => {
 
 describe('action commander', () => {
 	it('enregistre la commande au retrait et redirige vers la confirmation', async () => {
-		const r = await executer(() =>
-			actions.commander(evenement(db, { form: formulaire({ mode: 'virement' }) }))
-		);
+		const r = await executer(() => actions.commander(evenement(db, { form: formulaire() })));
 		expect(r).toMatchObject({ redirection: expect.stringMatching(/^\/commande\/[0-9a-f-]{36}$/) });
 		const [c] = await db.select().from(commandes);
 		expect(c).toMatchObject({ modePaiement: 'retrait', statut: 'confirmee', totalCentimes: 160 });
+	});
+
+	it('accepte le virement quand il est configuré', async () => {
+		const r = await executer(() =>
+			actions.commander(
+				evenement(db, { form: formulaire({ mode: 'virement' }), virement: VIREMENT })
+			)
+		);
+		expect(r).toHaveProperty('redirection');
+		const [c] = await db.select().from(commandes);
+		expect(c).toMatchObject({ modePaiement: 'virement', statut: 'en_attente_paiement' });
+		expect(c.paiementAvant!.getTime()).toBeGreaterThan(Date.now());
+	});
+
+	it('refuse le virement quand il n’est pas configuré', async () => {
+		const r = await executer(() =>
+			actions.commander(evenement(db, { form: formulaire({ mode: 'virement' }) }))
+		);
+		expect(r).toMatchObject({
+			resultat: {
+				status: 400,
+				data: { mode: 'virement', message: expect.stringContaining('virement') }
+			}
+		});
+		expect(await db.$count(commandes)).toBe(0);
 	});
 
 	it('exige l’acceptation des CGV et renvoie la saisie', async () => {

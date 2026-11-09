@@ -167,6 +167,29 @@ test('un client annule lui-même sa commande ; le stock revient', async ({ page 
 	await expect(produit(page, 'Concombre').locator('.discret').first()).toHaveText(avant!);
 });
 
+test('un client paie par virement : coordonnées, libellé et date limite', async ({ page }) => {
+	await ouvrir(page, '/');
+	await plus(page, 'Concombre').click();
+	await page.getByRole('link', { name: 'Valider mon panier' }).click();
+	await page.waitForLoadState('networkidle');
+	await remplirCoordonnees(page, 'Vic Virement', 'vic@example.fr');
+	await page.getByText('À la ferme').click();
+	await page.getByText('Par virement').click();
+	await page.getByLabel(/J’ai lu et j’accepte/).check();
+	await page.getByRole('button', { name: 'Commander – je paierai 0,80 € par virement' }).click();
+	await expect(page).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
+
+	const bloc = page.locator('section.virement');
+	await expect(bloc.getByRole('heading')).toContainText('À payer par virement avant le');
+	await expect(bloc).toContainText('FR76 3000 6000 0112 3456 7890 189');
+	await expect(bloc).toContainText('Ferme des Tests');
+	await expect(bloc).toContainText('0,80 €');
+	const reference = (await page.locator('.reference strong').textContent())!;
+	await expect(bloc.locator('dd code').last()).toHaveText(reference);
+	await verifierAccessibilite(page);
+	await verifierLargeur(page);
+});
+
 test('une adresse de commande ou d’annulation inconnue répond 404', async ({ page }) => {
 	for (const chemin of ['/commande/00000000-0000-4000-8000-000000000000', '/annuler/inconnu']) {
 		const reponse = await page.goto(chemin);

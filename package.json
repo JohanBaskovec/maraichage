@@ -23,7 +23,9 @@
 		"db:migrate:local": "wrangler d1 migrations apply maraichage --local",
 		"db:migrate:remote": "wrangler d1 migrations apply maraichage --remote",
 		"deploy": "npm run build && wrangler deploy",
-		"test:e2e": "npm run build && playwright test"
+		"test:e2e": "npm run build && playwright test",
+		"deploy:taches": "wrangler deploy -c workers/taches/wrangler.jsonc",
+		"taches:verifier": "wrangler deploy --dry-run --outdir .wrangler/taches-build -c workers/taches/wrangler.jsonc"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.14.0",
