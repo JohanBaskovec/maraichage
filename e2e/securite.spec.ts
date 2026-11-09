@@ -59,6 +59,26 @@ test('une commande envoyée depuis un autre site est refusée (CSRF)', async ({ 
 	expect(r.status()).toBe(403);
 });
 
+test('une commande sans vérification anti-robot est refusée (Turnstile)', async ({
+	request,
+	baseURL
+}) => {
+	const r = await request.post('/commande?/commander', {
+		form: {
+			nom: 'Robot',
+			email: 'robot@example.fr',
+			telephone: '0612345678',
+			creneau: '1',
+			cgv: 'oui',
+			o1: '1'
+		},
+		headers: { origin: baseURL! },
+		maxRedirects: 0
+	});
+	expect(r.status()).toBe(400);
+	expect(await r.text()).toContain('vérification anti-robot a échoué');
+});
+
 test('les en-têtes de sécurité sont présents', async ({ request }) => {
 	for (const chemin of ['/', '/admin']) {
 		const r = await request.get(chemin, { maxRedirects: 0 });

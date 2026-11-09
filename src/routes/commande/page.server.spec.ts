@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	ajouterCreneau,
 	ajouterOffre,
@@ -57,6 +57,10 @@ afterEach(async () => {
 	await fermer();
 });
 
+function turnstileDeTest(reponse: boolean) {
+	return { cleSite: 'cle-site', verifier: vi.fn(async () => reponse) };
+}
+
 const formulaire = (autres: Record<string, string> = {}) => ({
 	nom: 'Camille Martin',
 	email: 'camille@example.fr',
@@ -68,6 +72,12 @@ const formulaire = (autres: Record<string, string> = {}) => ({
 });
 
 describe('load', () => {
+	it('donne la clé publique Turnstile seulement si la vérification est active', async () => {
+		expect((await load(evenement(db))).turnstile).toBeNull();
+		const t = turnstileDeTest(true);
+		expect((await load(evenement(db, { turnstile: t }))).turnstile).toBe('cle-site');
+	});
+
 	it('indique si le virement est proposé', async () => {
 		expect((await load(evenement(db))).virement).toBe(false);
 		expect((await load(evenement(db, { virement: VIREMENT }))).virement).toBe(true);
@@ -128,6 +138,46 @@ describe('action commander', () => {
 			actions.commander(evenement(db, { form: formulaire({ cgv: '' }), courriels: t.courriels }))
 		);
 		expect(t.envoyes).toEqual([]);
+	});
+
+	it('vérifie le jeton Turnstile avec l’adresse du client', async () => {
+		const t = turnstileDeTest(true);
+		const r = await executer(() =>
+			actions.commander(
+				evenement(db, {
+					form: formulaire({ 'cf-turnstile-response': 'jeton-ok' }),
+					turnstile: t,
+					headers: { 'cf-connecting-ip': '203.0.113.7' }
+				})
+			)
+		);
+		expect(r).toHaveProperty('redirection');
+		expect(t.verifier).toHaveBeenCalledWith('jeton-ok', '203.0.113.7');
+	});
+
+	it('refuse la commande si Turnstile rejette le jeton, sans toucher au stock', async () => {
+		const t = turnstileDeTest(false);
+		const r = await executer(() =>
+			actions.commander(evenement(db, { form: formulaire(), turnstile: t }))
+		);
+		expect(r).toMatchObject({
+			resultat: {
+				status: 400,
+				data: { nom: 'Camille Martin', message: expect.stringContaining('anti-robot') }
+			}
+		});
+		expect(t.verifier).toHaveBeenCalledWith(null, '127.0.0.1');
+		expect(await db.$count(commandes)).toBe(0);
+		const vente = (await lireVente(db, venteId))!;
+		expect(vente.offres.every((o) => o.qteReservee === 0)).toBe(true);
+	});
+
+	it('ne consomme pas le jeton quand la saisie est refusée avant', async () => {
+		const t = turnstileDeTest(true);
+		await executer(() =>
+			actions.commander(evenement(db, { form: formulaire({ cgv: '' }), turnstile: t }))
+		);
+		expect(t.verifier).not.toHaveBeenCalled();
 	});
 
 	it('accepte le virement quand il est configuré', async () => {

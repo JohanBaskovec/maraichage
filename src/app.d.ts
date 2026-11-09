@@ -1,6 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 import type { Courrielleur } from '#lib/server/courriels/envoi.ts';
 import type { Db } from '#lib/server/db/index.ts';
+import type { Turnstile } from '#lib/server/turnstile.ts';
 import type { CoordonneesVirement } from '#lib/virement.ts';
 
 declare global {
@@ -11,6 +12,8 @@ declare global {
 			virement: CoordonneesVirement | null;
 			/** Envoi des e-mails aux clients (Resend). */
 			courriels: Courrielleur;
+			/** Vérification anti-robot ; `null` si Turnstile n'est pas configuré. */
+			turnstile: Turnstile | null;
 			/** E-mail de la personne connectée au back-office (Cloudflare Access). */
 			admin?: string;
 		}

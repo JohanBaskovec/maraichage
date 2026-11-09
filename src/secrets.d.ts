@@ -12,5 +12,7 @@ declare namespace Cloudflare {
 		VIREMENT_TITULAIRE?: string;
 		/** Clé d'API Resend pour envoyer les e-mails (dans les deux Workers). */
 		RESEND_API_KEY?: string;
+		/** Clé secrète du widget Turnstile (anti-robot du formulaire de commande). */
+		TURNSTILE_SECRET?: string;
 	}
 }

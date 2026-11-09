@@ -1,6 +1,7 @@
 import type { CoordonneesVirement } from '#lib/virement.ts';
 import type { Courriel, Courrielleur } from '../courriels/envoi.ts';
 import type { Db } from '../db/index.ts';
+import type { Turnstile } from '../turnstile.ts';
 
 /**
  * Faux événement SvelteKit pour appeler un `load` ou une action de formulaire
@@ -14,6 +15,8 @@ export function evenement(
 		form?: Record<string, string>;
 		virement?: CoordonneesVirement | null;
 		courriels?: Courrielleur;
+		turnstile?: Turnstile | null;
+		headers?: Record<string, string>;
 	} = {}
 ) {
 	const url = new URL(options.url ?? 'http://localhost/');
@@ -23,11 +26,13 @@ export function evenement(
 		locals: {
 			db,
 			virement: options.virement ?? null,
-			courriels: options.courriels ?? { envoyer: async () => true }
+			courriels: options.courriels ?? { envoyer: async () => true },
+			turnstile: options.turnstile ?? null
 		},
 		url,
 		params: options.params ?? {},
-		request: new Request(url, { method: 'POST', body: corps }),
+		request: new Request(url, { method: 'POST', body: corps, headers: options.headers }),
+		getClientAddress: () => '127.0.0.1',
 		setHeaders: () => {}
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- seuls ces champs sont utilisés
 	} as any;
