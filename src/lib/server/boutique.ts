@@ -1,6 +1,15 @@
-import { and, asc, eq, gt, lte } from 'drizzle-orm';
+import { and, asc, eq, gt, lte, type SQL } from 'drizzle-orm';
+import { limiteAnnulation } from './commandes.ts';
 import type { Db } from './db/index.ts';
-import { commandes, creneaux, lignesCommande, offres, produits, ventes } from './db/schema.ts';
+import {
+	commandes,
+	creneaux,
+	lignesCommande,
+	offres,
+	produits,
+	STATUTS_ACTIFS,
+	ventes
+} from './db/schema.ts';
 
 // Lectures côté client : vente en cours, catalogue, récapitulatif de commande.
 
@@ -78,7 +87,13 @@ export async function prochaineVente(db: Db, maintenant: Date = new Date()) {
 }
 
 /** Récapitulatif d'une commande, pour la page de confirmation. */
-export async function lireCommande(db: Db, id: string) {
+export const lireCommande = (db: Db, id: string) => lireCommandeOu(db, eq(commandes.id, id));
+
+/** Même récapitulatif, retrouvé par le jeton du lien d'annulation. */
+export const lireCommandeParJeton = (db: Db, jeton: string) =>
+	lireCommandeOu(db, eq(commandes.jetonAnnulation, jeton));
+
+async function lireCommandeOu(db: Db, condition: SQL) {
 	const [commande] = await db
 		.select({
 			id: commandes.id,
@@ -90,6 +105,7 @@ export async function lireCommande(db: Db, id: string) {
 			statut: commandes.statut,
 			totalCentimes: commandes.totalCentimes,
 			venteId: commandes.venteId,
+			jetonAnnulation: commandes.jetonAnnulation,
 			creneau: {
 				date: creneaux.date,
 				heureDebut: creneaux.heureDebut,
@@ -99,7 +115,7 @@ export async function lireCommande(db: Db, id: string) {
 		})
 		.from(commandes)
 		.innerJoin(creneaux, eq(creneaux.id, commandes.creneauId))
-		.where(eq(commandes.id, id));
+		.where(condition);
 	if (!commande) return null;
 	const lignes = await db
 		.select({
@@ -111,7 +127,13 @@ export async function lireCommande(db: Db, id: string) {
 		.from(lignesCommande)
 		.innerJoin(offres, eq(offres.id, lignesCommande.offreId))
 		.innerJoin(produits, eq(produits.id, offres.produitId))
-		.where(eq(lignesCommande.commandeId, id))
+		.where(eq(lignesCommande.commandeId, commande.id))
 		.orderBy(asc(produits.nom));
-	return { ...commande, lignes };
+	return {
+		...commande,
+		lignes,
+		/** Jusqu'à quand le client peut annuler lui-même. */
+		limiteAnnulation: limiteAnnulation(commande.creneau),
+		annulable: (STATUTS_ACTIFS as readonly string[]).includes(commande.statut)
+	};
 }

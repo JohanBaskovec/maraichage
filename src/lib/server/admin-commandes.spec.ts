@@ -12,9 +12,12 @@ import {
 	annulerCommandeVente,
 	changerStatutCommande,
 	listerCommandes,
+	debloquerClient,
+	listerClientsBloques,
 	marquerPayee,
 	recapPreparation
 } from './admin-commandes.ts';
+import { estBloque } from './commandes.ts';
 import { passerCommande } from './commandes.ts';
 import type { Db } from './db/index.ts';
 import { commandes, offres } from './db/schema.ts';
@@ -264,5 +267,57 @@ describe('annulerCommandeVente', () => {
 		});
 		const [o] = await db.select().from(offres).where(eq(offres.id, concombre));
 		expect(o.qteReservee).toBe(4);
+	});
+});
+
+describe('commandes non récupérées et clients bloqués', () => {
+	it('marque non récupérée, et permet de revenir en arrière', async () => {
+		const c = await commander('A', matin, [[concombre, 1]]);
+		expect(await changerStatutCommande(db, venteId, c.id, 'non_recuperee')).toEqual({ ok: true });
+		expect((await statut(c.id)).statut).toBe('non_recuperee');
+		expect(await listerCommandes(db, venteId, { statut: 'non_recuperee' })).toHaveLength(1);
+		expect(await listerCommandes(db, venteId, { statut: 'a_retirer' })).toHaveLength(0);
+		expect(await changerStatutCommande(db, venteId, c.id, 'confirmee')).toEqual({ ok: true });
+		// Une commande récupérée ne devient pas « non récupérée ».
+		await changerStatutCommande(db, venteId, c.id, 'recuperee');
+		expect(await changerStatutCommande(db, venteId, c.id, 'non_recuperee')).toMatchObject({
+			ok: false
+		});
+	});
+
+	it('liste les clients bloqués et les débloque', async () => {
+		const a = await commander('Camille Martin', matin, [[concombre, 1]], '0611111111');
+		const b = await commander('Camille M.', soir, [[concombre, 1]], '0611111111');
+		const seule = await commander('Lou Garnier', soir, [[concombre, 1]], '0622222222');
+		for (const c of [a, b, seule]) await changerStatutCommande(db, venteId, c.id, 'non_recuperee');
+
+		const bloques = await listerClientsBloques(db, 2);
+		// Même e-mail (camille@…) et même téléphone : listé une seule fois.
+		expect(bloques).toEqual([
+			{
+				identifiant: 'camille@example.fr',
+				type: 'email',
+				absences: 2,
+				noms: ['Camille Martin', 'Camille M.'],
+				references: [a.reference, b.reference]
+			}
+		]);
+
+		expect(await debloquerClient(db, 'camille@example.fr')).toBe(2);
+		expect(await listerClientsBloques(db, 2)).toEqual([]);
+		expect(await estBloque(db, 'camille@example.fr', '0611111111')).toBe(false);
+		// Les commandes restent « non récupérées » (historique), mais excusées.
+		expect((await statut(a.id)).statut).toBe('non_recuperee');
+		expect(await debloquerClient(db, '')).toBe(0);
+	});
+
+	it('repère un client bloqué par son téléphone avec deux e-mails différents', async () => {
+		const a = await commander('Sam', matin, [[concombre, 1]], '0633333333');
+		const b = await commander('Samuel', soir, [[concombre, 1]], '0633333333');
+		for (const c of [a, b]) await changerStatutCommande(db, venteId, c.id, 'non_recuperee');
+		expect((await listerClientsBloques(db, 2)).map((c) => [c.type, c.identifiant])).toEqual([
+			['telephone', '0633333333']
+		]);
+		expect(await debloquerClient(db, '0633333333')).toBe(2);
 	});
 });

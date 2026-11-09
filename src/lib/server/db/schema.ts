@@ -133,6 +133,11 @@ export const commandes = sqliteTable(
 		modePaiement: text('mode_paiement', { enum: MODES_PAIEMENT }).notNull(),
 		statut: text('statut', { enum: STATUTS_COMMANDE }).notNull(),
 		payee: integer('payee', { mode: 'boolean' }).notNull().default(false),
+		/**
+		 * Commande non récupérée que le maraîcher a pardonnée (« Débloquer ») :
+		 * elle ne compte plus pour le blocage du client.
+		 */
+		absenceExcusee: integer('absence_excusee', { mode: 'boolean' }).notNull().default(false),
 		totalCentimes: integer('total_centimes').notNull(),
 		creeLe: integer('cree_le', { mode: 'timestamp_ms' }).notNull().default(maintenantMs),
 		jetonAnnulation: text('jeton_annulation').notNull().unique()

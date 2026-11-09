@@ -80,7 +80,7 @@ describe('actions', () => {
 	});
 
 	it('refuse un statut hors des changements autorisés', async () => {
-		for (const statut of ['annulee', 'non_recuperee', 'en_attente_paiement', '']) {
+		for (const statut of ['annulee', 'en_attente_paiement', 'nimporte', '']) {
 			expect(await actions.statut(page({ commande: commandeId, statut }))).toMatchObject({
 				status: 400,
 				data: { commande: commandeId }

@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Browser, type Page } from '@playwright/test';
 import { depuisChampParis, formatDateHeure, versChampParis } from '../src/lib/heure';
 import { ouvrir, verifierAccessibilite, verifierLargeur } from './outils';
 
@@ -134,6 +134,38 @@ test('il prépare une vente, la publie, puis la duplique pour la semaine suivant
 	await verifierLargeur(page);
 });
 
+/** Un client passe commande dans la boutique ; renvoie le message d'erreur éventuel. */
+async function commanderDansLaBoutique(
+	browser: Browser,
+	client: { nom: string; email: string; telephone: string },
+	quantites: { concombres: number; patates?: number }
+): Promise<string | null> {
+	const page = await (await browser.newContext()).newPage();
+	try {
+		await ouvrir(page, '/');
+		const plus = (produit: string) =>
+			page.locator('li.produit', { hasText: produit }).getByRole('button', { name: /^Ajouter/ });
+		for (let i = 0; i < quantites.concombres; i++) await plus('Concombre').click();
+		for (let i = 0; i < (quantites.patates ?? 0); i++) await plus('Pommes de terre').click();
+		await page.getByRole('link', { name: 'Valider mon panier' }).click();
+		await page.waitForLoadState('networkidle');
+		await page.getByLabel('Nom et prénom').fill(client.nom);
+		await page.getByLabel('E-mail').fill(client.email);
+		await page.getByLabel('Téléphone').fill(client.telephone);
+		await page.getByLabel(/J’ai lu et j’accepte/).check();
+		await page.getByRole('button', { name: /^Commander/ }).click();
+		return await Promise.race([
+			page.waitForURL(/\/commande\/[0-9a-f-]{36}$/).then(() => null),
+			page
+				.getByRole('alert')
+				.waitFor()
+				.then(() => page.getByRole('alert').textContent())
+		]);
+	} finally {
+		await page.context().close();
+	}
+}
+
 test('des clients commandent ; le maraîcher prépare, encaisse, remet et annule', async ({
 	page,
 	browser
@@ -143,21 +175,8 @@ test('des clients commandent ; le maraîcher prépare, encaisse, remet et annule
 		['Camille Martin', 2, 2],
 		['Dominique Petit', 3, 0]
 	] as const) {
-		const client = await (await browser.newContext()).newPage();
-		await ouvrir(client, '/');
-		const plus = (produit: string) =>
-			client.locator('li.produit', { hasText: produit }).getByRole('button', { name: /^Ajouter/ });
-		for (let i = 0; i < concombres; i++) await plus('Concombre').click();
-		for (let i = 0; i < patates; i++) await plus('Pommes de terre').click();
-		await client.getByRole('link', { name: 'Valider mon panier' }).click();
-		await client.waitForLoadState('networkidle');
-		await client.getByLabel('Nom et prénom').fill(nom);
-		await client.getByLabel('E-mail').fill('client@example.fr');
-		await client.getByLabel('Téléphone').fill('06 12 34 56 78');
-		await client.getByLabel(/J’ai lu et j’accepte/).check();
-		await client.getByRole('button', { name: /^Commander/ }).click();
-		await expect(client).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
-		await client.context().close();
+		const client = { nom, email: 'client@example.fr', telephone: '06 12 34 56 78' };
+		expect(await commanderDansLaBoutique(browser, client, { concombres, patates })).toBeNull();
 	}
 
 	// La vente compte les deux commandes.
@@ -200,7 +219,7 @@ test('des clients commandent ; le maraîcher prépare, encaisse, remet et annule
 	await envoyer(
 		page,
 		'statut',
-		commande('Camille Martin').getByRole('button', { name: 'Récupérée' })
+		commande('Camille Martin').getByRole('button', { name: 'Récupérée', exact: true })
 	);
 	await expect(commande('Camille Martin').locator('.badges')).toContainText('Récupérée');
 	await expect(page.locator('.resume')).toContainText('à encaisser 2,70 € · encaissé 4,30 €');
@@ -224,4 +243,43 @@ test('des clients commandent ; le maraîcher prépare, encaisse, remet et annule
 	await expect(page.locator('li.produit', { hasText: 'Concombre' })).toContainText(
 		'reste 198 pièces'
 	);
+});
+
+test('un client qui ne vient pas deux fois est bloqué, puis débloqué', async ({
+	page,
+	browser
+}) => {
+	const lou = { nom: 'Lou Absent', email: 'lou@example.fr', telephone: '07 11 22 33 44' };
+	expect(await commanderDansLaBoutique(browser, lou, { concombres: 1 })).toBeNull();
+	expect(await commanderDansLaBoutique(browser, lou, { concombres: 1 })).toBeNull();
+
+	// Le maraîcher marque les deux commandes « non récupérées ».
+	await ouvrir(page, urlVente.replace(/\/?$/, '/commandes?q=lou'));
+	const commandesLou = page.locator('article.commande');
+	await expect(commandesLou).toHaveCount(2);
+	for (let i = 0; i < 2; i++) {
+		page.once('dialog', (d) => d.accept());
+		await envoyer(
+			page,
+			'statut',
+			commandesLou.getByRole('button', { name: 'Non récupérée', exact: true }).first()
+		);
+	}
+	await expect(commandesLou.locator('.badge', { hasText: 'Non récupérée' })).toHaveCount(2);
+
+	// Lou ne peut plus commander en ligne.
+	expect(await commanderDansLaBoutique(browser, lou, { concombres: 1 })).toContain(
+		'n’ont pas été récupérées'
+	);
+
+	// Le maraîcher le débloque.
+	await ouvrir(page, '/admin/clients');
+	await expect(page.locator('article.client')).toContainText('lou@example.fr');
+	await expect(page.locator('article.client')).toContainText('2 commandes non récupérées');
+	await verifierAccessibilite(page);
+	await envoyer(page, 'debloquer');
+	await expect(page.getByRole('status')).toContainText('lou@example.fr est débloqué');
+	await expect(page.getByText('Aucun client bloqué.')).toBeVisible();
+
+	expect(await commanderDansLaBoutique(browser, lou, { concombres: 1 })).toBeNull();
 });

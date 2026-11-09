@@ -65,6 +65,10 @@ export const actions = {
 				return echec(r.message);
 			case 'vente_fermee':
 				return echec('La vente est terminée : les commandes ne sont plus acceptées.');
+			case 'client_bloque':
+				return echec(
+					'Plusieurs de vos commandes précédentes n’ont pas été récupérées : la commande en ligne vous est fermée. Contactez-nous pour en parler.'
+				);
 			case 'creneau_complet':
 				return echec('Ce créneau vient d’être complet : choisissez-en un autre.');
 			case 'stock_insuffisant': {

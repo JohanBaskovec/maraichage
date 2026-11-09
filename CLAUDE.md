@@ -92,7 +92,20 @@ confirmee / prete   → non_recuperee   (posé par le maraîcher après le crén
 ```
 
 Après **deux** commandes `non_recuperee`, le même e-mail ou téléphone ne peut
-plus commander ; le maraîcher peut débloquer depuis le back-office.
+plus commander ; le maraîcher peut débloquer depuis le back-office
+(`/admin/clients`). Débloquer passe `commandes.absence_excusee` à vrai : les
+commandes restent `non_recuperee` dans l'historique mais ne comptent plus
+(`estBloque`, `debloquerClient`).
+
+Réglages dans `src/lib/config.ts` : `MAX_PAS_PAR_PRODUIT` (20 pas par produit et
+par commande, appliqué côté serveur et dans le panier), `ABSENCES_AVANT_BLOCAGE`
+(2), `ANNULATION_HEURES_AVANT_RETRAIT` (12 h).
+
+Annulation par le client : lien `/annuler/[jeton]` (jeton secret
+`jeton_annulation`), proposé sur la page de confirmation et plus tard dans les
+e-mails. Ouvrir la page n'annule rien (les messageries ouvrent les liens pour
+les vérifier) : il faut cliquer sur le bouton (POST). Possible tant que la
+commande est à retirer, jusqu'à 12 h avant le début du créneau (`annulerParClient`).
 
 ## Stock sans survente (critique)
 

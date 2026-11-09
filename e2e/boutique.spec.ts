@@ -80,11 +80,16 @@ test('un client remplit son panier, commande et reçoit sa référence', async (
 	await expect(page.getByLabel('E-mail')).toHaveValue('camille@example.fr');
 });
 
-test('on ne peut pas mettre plus que le stock dans le panier', async ({ page }) => {
+test('on ne peut pas mettre plus que le stock, ni plus de 20 par commande', async ({ page }) => {
 	await ouvrir(page, '/');
 	for (let i = 0; i < 3; i++) await plus(page, 'Radis').click();
 	await expect(produit(page, 'Radis').locator('output')).toHaveText('3 bottes');
 	await expect(plus(page, 'Radis')).toBeDisabled();
+
+	for (let i = 0; i < 20; i++) await plus(page, 'Concombre').click();
+	await expect(produit(page, 'Concombre').locator('output')).toHaveText('20 pièces');
+	await expect(plus(page, 'Concombre')).toBeDisabled();
+	await expect(produit(page, 'Concombre')).toContainText('20 pièces au plus par commande');
 });
 
 test('si un autre client est plus rapide, le panier est ajusté sans perdre la saisie', async ({
@@ -133,7 +138,38 @@ test('si un autre client est plus rapide, le panier est ajusté sans perdre la s
 	await expect(produit(lent, 'Radis')).toContainText('épuisé');
 });
 
-test('une adresse de commande inconnue répond 404', async ({ page }) => {
-	const reponse = await page.goto('/commande/00000000-0000-4000-8000-000000000000');
-	expect(reponse?.status()).toBe(404);
+test('un client annule lui-même sa commande ; le stock revient', async ({ page }) => {
+	await ouvrir(page, '/');
+	const avant = await produit(page, 'Concombre').locator('.discret').first().textContent();
+	await plus(page, 'Concombre').click();
+	await plus(page, 'Concombre').click();
+	await page.getByRole('link', { name: 'Valider mon panier' }).click();
+	await page.waitForLoadState('networkidle');
+	await remplirCoordonnees(page, 'Alex Annule', 'alex@example.fr');
+	await page.getByText('À la ferme').click();
+	await page.getByLabel(/J’ai lu et j’accepte/).check();
+	await page.getByRole('button', { name: /^Commander/ }).click();
+	await expect(page).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
+	const reference = await page.locator('.reference strong').textContent();
+
+	// Le lien mène à une page de confirmation : l'ouvrir n'annule rien.
+	await page.getByRole('link', { name: 'Annuler ma commande' }).click();
+	await expect(page).toHaveURL(/\/annuler\//);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Annuler ma commande ?');
+	await verifierAccessibilite(page);
+	await page.getByRole('button', { name: 'Oui, annuler ma commande' }).click();
+	await expect(page.getByRole('status')).toContainText(`La commande ${reference} est annulée.`);
+
+	// Recharger le lien : déjà annulée.
+	await page.reload();
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Commande annulée');
+	await ouvrir(page, '/');
+	await expect(produit(page, 'Concombre').locator('.discret').first()).toHaveText(avant!);
+});
+
+test('une adresse de commande ou d’annulation inconnue répond 404', async ({ page }) => {
+	for (const chemin of ['/commande/00000000-0000-4000-8000-000000000000', '/annuler/inconnu']) {
+		const reponse = await page.goto(chemin);
+		expect(reponse?.status()).toBe(404);
+	}
 });

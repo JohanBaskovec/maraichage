@@ -1,3 +1,4 @@
+import { MAX_PAS_PAR_PRODUIT } from './config.ts';
 import { prixLigneCentimes, type Unite } from './prix.ts';
 
 // Le panier vit dans le navigateur. Il voyage vers la page de validation dans
@@ -29,17 +30,23 @@ export interface OffrePanier {
 	restant: number;
 }
 
+/** Ce qu'un client peut prendre d'un produit : le stock restant, dans la limite par commande. */
+export function quantiteMax(offre: Pick<OffrePanier, 'pas' | 'restant'>): number {
+	return Math.min(offre.restant, offre.pas * MAX_PAS_PAR_PRODUIT);
+}
+
 export interface LigneRecap {
 	offre: OffrePanier;
 	quantite: number;
 	prixCentimes: number;
-	/** La quantité demandée a été réduite au stock restant. */
+	/** La quantité demandée a été réduite (stock restant ou limite par commande). */
 	reduite: boolean;
 }
 
 /**
  * Récapitulatif d'un panier face au catalogue du moment : les produits disparus
- * sont ignorés, les quantités ramenées à un multiple du pas et au stock restant.
+ * sont ignorés, les quantités ramenées à un multiple du pas, au stock restant et
+ * à la limite par commande.
  */
 export function recapitulatif(offres: OffrePanier[], quantites: Quantites) {
 	const lignes: LigneRecap[] = [];
@@ -47,7 +54,7 @@ export function recapitulatif(offres: OffrePanier[], quantites: Quantites) {
 		const demandee = quantites.get(offre.id);
 		if (!demandee) continue;
 		const auPas = Math.floor(demandee / offre.pas) * offre.pas;
-		const quantite = Math.min(auPas, offre.restant);
+		const quantite = Math.min(auPas, quantiteMax(offre));
 		if (quantite <= 0) {
 			if (demandee > 0) lignes.push({ offre, quantite: 0, prixCentimes: 0, reduite: true });
 			continue;

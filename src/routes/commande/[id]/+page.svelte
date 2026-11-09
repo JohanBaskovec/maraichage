@@ -2,7 +2,7 @@
 	import { resolve } from '$app/paths';
 	import { NOM_BOUTIQUE } from '#lib/config.ts';
 	import { formatEuros, formatQuantite } from '#lib/format.ts';
-	import { formatJour } from '#lib/heure.ts';
+	import { formatDateHeure, formatJour } from '#lib/heure.ts';
 	import { prixLigneCentimes } from '#lib/prix.ts';
 	import { viderPanier } from '#lib/stockage.ts';
 	import type { PageProps } from './$types';
@@ -77,6 +77,14 @@
 			</tfoot>
 		</table>
 	</section>
+
+	{#if active && new Date() < c.limiteAnnulation}
+		<p class="discret">
+			Un empêchement ?
+			<a href={resolve('/annuler/[jeton]', { jeton: c.jetonAnnulation })}>Annuler ma commande</a>
+			(possible jusqu’au {formatDateHeure(c.limiteAnnulation)}).
+		</p>
+	{/if}
 
 	<p><a href={resolve('/')}>Retour à la boutique</a></p>
 </main>

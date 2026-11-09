@@ -3,7 +3,7 @@
 	import { NOM_BOUTIQUE } from '#lib/config.ts';
 	import { formatEuros, formatQuantite } from '#lib/format.ts';
 	import { formatDateHeure, formatJour } from '#lib/heure.ts';
-	import { quantitesVersUrl, recapitulatif } from '#lib/panier.ts';
+	import { quantiteMax, quantitesVersUrl, recapitulatif } from '#lib/panier.ts';
 	import { chargerPanier, enregistrerPanier } from '#lib/stockage.ts';
 	import type { PageProps } from './$types';
 
@@ -37,8 +37,9 @@
 	);
 
 	function changer(offre: NonNullable<typeof vente>['offres'][number], sens: 1 | -1) {
-		const actuelle = Math.min(panier[offre.id] ?? 0, offre.restant);
-		const nouvelle = Math.max(0, Math.min(offre.restant, actuelle + sens * offre.pas));
+		const max = quantiteMax(offre);
+		const actuelle = Math.min(panier[offre.id] ?? 0, max);
+		const nouvelle = Math.max(0, Math.min(max, actuelle + sens * offre.pas));
 		if (nouvelle === 0) delete panier[offre.id];
 		else panier[offre.id] = nouvelle;
 	}
@@ -90,7 +91,8 @@
 
 		<ul class="produits">
 			{#each vente.offres as offre (offre.id)}
-				{@const qte = Math.min(panier[offre.id] ?? 0, offre.restant)}
+				{@const max = quantiteMax(offre)}
+				{@const qte = Math.min(panier[offre.id] ?? 0, max)}
 				<li class="carte produit" class:choisi={qte > 0}>
 					<div class="nom">
 						<strong>{offre.produit}</strong>
@@ -98,6 +100,11 @@
 						<span class="discret">
 							{offre.restant > 0 ? `reste ${formatQuantite(offre.unite, offre.restant)}` : 'épuisé'}
 						</span>
+						{#if qte > 0 && qte === max && max < offre.restant}
+							<span class="discret limite">
+								{formatQuantite(offre.unite, max)} au plus par commande
+							</span>
+						{/if}
 					</div>
 					<div class="quantite" role="group" aria-label="Quantité de {offre.produit}">
 						<button
@@ -112,7 +119,7 @@
 							type="button"
 							class="rond"
 							onclick={() => changer(offre, 1)}
-							disabled={qte + offre.pas > offre.restant}
+							disabled={qte + offre.pas > max}
 							aria-label="Ajouter {formatQuantite(offre.unite, offre.pas)}">+</button
 						>
 					</div>
@@ -182,6 +189,9 @@
 	}
 	.prix {
 		font-weight: 500;
+	}
+	.limite {
+		font-style: italic;
 	}
 	.quantite {
 		display: flex;

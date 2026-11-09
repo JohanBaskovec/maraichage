@@ -118,10 +118,27 @@
 					{/if}
 					{#if c.statut === 'confirmee' || c.statut === 'prete'}
 						<button name="statut" value="recuperee">Récupérée</button>
-					{:else if c.statut === 'recuperee'}
+					{:else if c.statut === 'recuperee' || c.statut === 'non_recuperee'}
 						<button name="statut" value="confirmee" class="secondaire">Remettre à retirer</button>
 					{/if}
 				</form>
+				{#if c.statut === 'confirmee' || c.statut === 'prete'}
+					<form
+						method="POST"
+						action="?/statut"
+						use:enhance={({ cancel }) => {
+							if (
+								!confirm(
+									`${c.nom} n’est pas venu(e) chercher la commande ${c.reference} ? Au bout de deux, le client ne peut plus commander en ligne.`
+								)
+							)
+								cancel();
+						}}
+					>
+						<input type="hidden" name="commande" value={c.id} />
+						<button name="statut" value="non_recuperee" class="secondaire">Non récupérée</button>
+					</form>
+				{/if}
 				{#if actives.includes(c.statut)}
 					<form
 						method="POST"
@@ -176,6 +193,7 @@
 	.badge.statut-prete {
 		background: var(--accent-doux);
 	}
+	.badge.statut-non_recuperee,
 	.badge.statut-annulee {
 		border-color: var(--erreur);
 		color: var(--erreur);

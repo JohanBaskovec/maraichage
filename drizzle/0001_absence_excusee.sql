@@ -1,0 +1,1 @@
+ALTER TABLE `commandes` ADD `absence_excusee` integer DEFAULT false NOT NULL;

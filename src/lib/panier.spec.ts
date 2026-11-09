@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { quantitesDepuisUrl, quantitesVersUrl, recapitulatif, type OffrePanier } from './panier';
+import {
+	quantiteMax,
+	quantitesDepuisUrl,
+	quantitesVersUrl,
+	recapitulatif,
+	type OffrePanier
+} from './panier';
 
 const concombre: OffrePanier = {
 	id: 1,
@@ -60,5 +66,24 @@ describe('recapitulatif', () => {
 		]);
 		expect(r.totalCentimes).toBe(400);
 		expect(recapitulatif([patates], new Map([[2, 1200]])).lignes[0].quantite).toBe(1000);
+	});
+});
+
+describe('limite par commande', () => {
+	it('ramène la quantité à 20 pas par produit', () => {
+		const beaucoup = { ...concombre, restant: 500 };
+		const r = recapitulatif(
+			[beaucoup, { ...patates, restant: 50_000 }],
+			new Map([
+				[1, 35],
+				[2, 15_000]
+			])
+		);
+		expect(r.lignes.map((l) => [l.offre.id, l.quantite, l.reduite])).toEqual([
+			[1, 20, true],
+			[2, 10_000, true]
+		]);
+		expect(quantiteMax(beaucoup)).toBe(20);
+		expect(quantiteMax({ pas: 1, restant: 3 })).toBe(3);
 	});
 });

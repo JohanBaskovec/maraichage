@@ -14,6 +14,7 @@ export const FILTRES_STATUT = {
 	tout: 'Toutes (sauf annulées)',
 	a_retirer: 'À retirer',
 	recuperee: 'Récupérées',
+	non_recuperee: 'Non récupérées',
 	annulee: 'Annulées'
 } as const;
 export type FiltreStatut = keyof typeof FILTRES_STATUT;

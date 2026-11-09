@@ -7,7 +7,8 @@
 
 	const liens = [
 		{ href: '/admin' as const, texte: 'Ventes' },
-		{ href: '/admin/produits' as const, texte: 'Produits' }
+		{ href: '/admin/produits' as const, texte: 'Produits' },
+		{ href: '/admin/clients' as const, texte: 'Clients bloqués' }
 	];
 	const actif = (href: string) =>
 		href === '/admin'

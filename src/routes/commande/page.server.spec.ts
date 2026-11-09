@@ -132,6 +132,20 @@ describe('action commander', () => {
 		});
 	});
 
+	it('explique à un client bloqué pourquoi il ne peut pas commander', async () => {
+		for (let i = 0; i < 2; i++) {
+			await executer(() => actions.commander(evenement(db, { form: formulaire() })));
+		}
+		await db.update(commandes).set({ statut: 'non_recuperee' });
+		const r = await executer(() => actions.commander(evenement(db, { form: formulaire() })));
+		expect(r).toMatchObject({
+			resultat: {
+				status: 400,
+				data: { message: expect.stringContaining('n’ont pas été récupérées') }
+			}
+		});
+	});
+
 	it('refuse quand la vente est terminée', async () => {
 		await changerStatutVente(db, venteId, 'archivee');
 		const r = await executer(() => actions.commander(evenement(db, { form: formulaire() })));

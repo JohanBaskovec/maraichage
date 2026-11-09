@@ -1,4 +1,4 @@
-import { and, asc, count, eq, inArray, ne, sql, sum, type SQL } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, ne, or, sql, sum, type SQL } from 'drizzle-orm';
 import type { FiltreStatut } from '#lib/statuts.ts';
 import { annulerCommande } from './commandes.ts';
 import type { Db } from './db/index.ts';
@@ -31,6 +31,8 @@ function conditionStatut(filtre: FiltreStatut): SQL {
 			return inArray(commandes.statut, STATUTS_ACTIFS);
 		case 'recuperee':
 			return eq(commandes.statut, 'recuperee');
+		case 'non_recuperee':
+			return eq(commandes.statut, 'non_recuperee');
 		case 'annulee':
 			return eq(commandes.statut, 'annulee');
 		default:
@@ -163,8 +165,10 @@ const INTROUVABLE: ResultatSuivi = { ok: false, message: 'Commande introuvable.'
 const TRANSITIONS = {
 	prete: ['confirmee'],
 	recuperee: ['confirmee', 'prete'],
+	// Posé après le créneau ; compte pour le blocage du client.
+	non_recuperee: ['confirmee', 'prete'],
 	// Retour en arrière après un clic de trop.
-	confirmee: ['prete', 'recuperee']
+	confirmee: ['prete', 'recuperee', 'non_recuperee']
 } as const satisfies Partial<Record<StatutCommande, readonly StatutCommande[]>>;
 
 export type StatutSuivi = keyof typeof TRANSITIONS;
@@ -244,4 +248,67 @@ export async function annulerCommandeVente(
 				? 'Cette commande a déjà été récupérée : elle ne peut plus être annulée.'
 				: 'Cette commande ne peut plus être annulée.'
 	};
+}
+
+export interface ClientBloque {
+	/** E-mail ou téléphone qui totalise les absences. */
+	identifiant: string;
+	type: 'email' | 'telephone';
+	absences: number;
+	noms: string[];
+	references: string[];
+}
+
+/**
+ * Clients bloqués : e-mails et téléphones qui totalisent assez de commandes non
+ * récupérées non excusées (même règle que `estBloque`).
+ */
+export async function listerClientsBloques(db: Db, seuil: number): Promise<ClientBloque[]> {
+	const absences = await db
+		.select({
+			nom: commandes.nom,
+			email: commandes.email,
+			telephone: commandes.telephone,
+			reference: commandes.reference
+		})
+		.from(commandes)
+		.where(and(eq(commandes.statut, 'non_recuperee'), eq(commandes.absenceExcusee, false)))
+		.orderBy(asc(commandes.creeLe));
+	const resultat: ClientBloque[] = [];
+	for (const type of ['email', 'telephone'] as const) {
+		for (const [identifiant, liste] of Map.groupBy(absences, (a) => a[type])) {
+			if (liste.length < seuil) continue;
+			// Déjà listé par son e-mail : ne pas le répéter pour son téléphone.
+			const refs = liste.map((a) => a.reference);
+			if (resultat.some((r) => refs.every((ref) => r.references.includes(ref)))) continue;
+			resultat.push({
+				identifiant,
+				type,
+				absences: liste.length,
+				noms: [...new Set(liste.map((a) => a.nom))],
+				references: refs
+			});
+		}
+	}
+	return resultat;
+}
+
+/**
+ * Débloque un client : ses commandes non récupérées (par e-mail ou téléphone)
+ * deviennent des absences excusées et ne comptent plus.
+ */
+export async function debloquerClient(db: Db, identifiant: string): Promise<number> {
+	if (!identifiant) return 0;
+	const excusees = await db
+		.update(commandes)
+		.set({ absenceExcusee: true })
+		.where(
+			and(
+				eq(commandes.statut, 'non_recuperee'),
+				eq(commandes.absenceExcusee, false),
+				or(eq(commandes.email, identifiant), eq(commandes.telephone, identifiant))
+			)
+		)
+		.returning({ id: commandes.id });
+	return excusees.length;
 }

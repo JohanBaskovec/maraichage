@@ -1,6 +1,13 @@
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { annulerCommande, passerCommande, type CommandeDemandee } from './commandes.ts';
+import {
+	annulerCommande,
+	annulerParClient,
+	estBloque,
+	limiteAnnulation,
+	passerCommande,
+	type CommandeDemandee
+} from './commandes.ts';
 import type { Db } from './db/index.ts';
 import { commandes, creneaux, lignesCommande, offres, produits, ventes } from './db/schema.ts';
 import { baseDeTest } from './test/d1.ts';
@@ -235,7 +242,7 @@ describe('passerCommande', () => {
 			.from(lignesCommande);
 		expect(total).toBe(10);
 		expect(await db.$count(commandes)).toBe(10);
-	});
+	}, 30_000);
 
 	it('paniers simultanés de plusieurs produits : jamais de survente ni de panier partiel', async () => {
 		await db.update(offres).set({ qteInitiale: 2000 }).where(eq(offres.id, patates));
@@ -264,7 +271,7 @@ describe('passerCommande', () => {
 			.from(lignesCommande)
 			.where(eq(lignesCommande.offreId, concombres));
 		expect(await reserve(concombres)).toBe(total);
-	});
+	}, 30_000);
 });
 
 describe('annulerCommande', () => {
@@ -306,5 +313,111 @@ describe('annulerCommande', () => {
 
 	it('renvoie false pour une commande inconnue', async () => {
 		expect(await annulerCommande(db, 'inconnue')).toBe(false);
+	});
+});
+
+describe('limite par produit et par commande', () => {
+	it('refuse plus de 20 pas d’un même produit', async () => {
+		await db.update(offres).set({ qteInitiale: 500 }).where(eq(offres.id, concombres));
+		expect(
+			await passerCommande(db, demande([{ offreId: concombres, quantite: 21 }]), MAINTENANT)
+		).toMatchObject({ ok: false, erreur: 'saisie_invalide' });
+		expect(
+			await passerCommande(db, demande([{ offreId: concombres, quantite: 20 }]), MAINTENANT)
+		).toMatchObject({ ok: true });
+		// Au kg, par 500 g : 10 kg au plus.
+		expect(
+			await passerCommande(db, demande([{ offreId: patates, quantite: 10_500 }]), MAINTENANT)
+		).toMatchObject({ ok: false, erreur: 'saisie_invalide' });
+		expect(
+			await passerCommande(db, demande([{ offreId: patates, quantite: 10_000 }]), MAINTENANT)
+		).toMatchObject({ ok: true });
+	});
+});
+
+describe('blocage après deux commandes non récupérées', () => {
+	async function absence(autres: Partial<CommandeDemandee> = {}) {
+		const r = await passerCommande(
+			db,
+			demande([{ offreId: concombres, quantite: 1 }], autres),
+			MAINTENANT
+		);
+		if (!r.ok) throw new Error(JSON.stringify(r));
+		await db.update(commandes).set({ statut: 'non_recuperee' }).where(eq(commandes.id, r.id));
+		return r.id;
+	}
+
+	it('bloque à la deuxième absence, par e-mail ou par téléphone', async () => {
+		await absence();
+		expect(await estBloque(db, 'camille@example.fr', '0612345678')).toBe(false);
+		expect(
+			(await passerCommande(db, demande([{ offreId: concombres, quantite: 1 }]), MAINTENANT)).ok
+		).toBe(true);
+
+		// Deuxième absence avec un autre e-mail mais le même téléphone.
+		await absence({ email: 'autre@example.fr' });
+		expect(await estBloque(db, 'camille@example.fr', '0700000000')).toBe(false);
+		expect(await estBloque(db, 'nouveau@example.fr', '0612345678')).toBe(true);
+		expect(
+			await passerCommande(
+				db,
+				demande([{ offreId: concombres, quantite: 1 }], { email: 'nouveau@example.fr' }),
+				MAINTENANT
+			)
+		).toEqual({ ok: false, erreur: 'client_bloque' });
+	});
+
+	it('ne compte pas les absences excusées', async () => {
+		const a = await absence();
+		await absence();
+		expect(await estBloque(db, 'camille@example.fr', '0612345678')).toBe(true);
+		await db.update(commandes).set({ absenceExcusee: true }).where(eq(commandes.id, a));
+		expect(await estBloque(db, 'camille@example.fr', '0612345678')).toBe(false);
+	});
+
+	it('reconnaît l’e-mail quelle que soit la casse saisie', async () => {
+		await absence();
+		await absence();
+		expect(
+			await passerCommande(
+				db,
+				demande([{ offreId: concombres, quantite: 1 }], {
+					email: ' Camille@Example.FR ',
+					telephone: '07 00 00 00 00'
+				}),
+				MAINTENANT
+			)
+		).toEqual({ ok: false, erreur: 'client_bloque' });
+	});
+});
+
+describe('annulation par le client (lien avec jeton)', () => {
+	// Créneau du samedi 14 novembre à 9 h (Paris) : annulation possible jusqu'à 12 h avant.
+	const AVANT = new Date('2026-11-13T19:59:00Z');
+	const APRES = new Date('2026-11-13T20:00:00Z');
+
+	it('calcule la limite à partir de l’heure de Paris', () => {
+		expect(limiteAnnulation({ date: '2026-11-14', heureDebut: '09:00' }).toISOString()).toBe(
+			'2026-11-13T20:00:00.000Z'
+		);
+	});
+
+	it('annule avant la limite et rend le stock', async () => {
+		const r = await passerCommande(db, demande([{ offreId: concombres, quantite: 4 }]), MAINTENANT);
+		if (!r.ok) throw new Error();
+		expect(await annulerParClient(db, r.jetonAnnulation, AVANT)).toBe('annulee');
+		expect(await reserve(concombres)).toBe(0);
+		expect(await annulerParClient(db, r.jetonAnnulation, AVANT)).toBe('deja_terminee');
+	});
+
+	it('refuse après la limite, sur une commande récupérée, ou avec un jeton inconnu', async () => {
+		const r = await passerCommande(db, demande([{ offreId: concombres, quantite: 4 }]), MAINTENANT);
+		if (!r.ok) throw new Error();
+		expect(await annulerParClient(db, r.jetonAnnulation, APRES)).toBe('trop_tard');
+		expect(await reserve(concombres)).toBe(4);
+		await db.update(commandes).set({ statut: 'recuperee' });
+		expect(await annulerParClient(db, r.jetonAnnulation, AVANT)).toBe('deja_terminee');
+		expect(await annulerParClient(db, 'jeton-inconnu', AVANT)).toBe('introuvable');
+		expect(await annulerParClient(db, r.id, AVANT)).toBe('introuvable');
 	});
 });

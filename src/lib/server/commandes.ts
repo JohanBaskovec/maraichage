@@ -1,4 +1,10 @@
-import { and, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, or, sql } from 'drizzle-orm';
+import {
+	ABSENCES_AVANT_BLOCAGE,
+	ANNULATION_HEURES_AVANT_RETRAIT,
+	MAX_PAS_PAR_PRODUIT
+} from '#lib/config.ts';
+import { depuisChampParis } from '#lib/heure.ts';
 import { prixLigneCentimes } from '#lib/prix.ts';
 import type { Db } from './db/index.ts';
 import {
@@ -41,6 +47,7 @@ export type ResultatCommande =
 	| { ok: false; erreur: 'saisie_invalide'; message: string }
 	| { ok: false; erreur: 'vente_fermee' }
 	| { ok: false; erreur: 'creneau_complet' }
+	| { ok: false; erreur: 'client_bloque' }
 	| { ok: false; erreur: 'stock_insuffisant'; manques: Manque[] };
 
 const TENTATIVES_REFERENCE = 5;
@@ -98,7 +105,10 @@ export async function passerCommande(
 		return invalide('Quantité invalide.');
 	}
 
-	// 2. Vente ouverte (vérifié ici, côté serveur, jamais seulement dans l'interface)
+	// 2. Client bloqué après des commandes non récupérées
+	if (await estBloque(db, email, telephone)) return { ok: false, erreur: 'client_bloque' };
+
+	// 3. Vente ouverte (vérifié ici, côté serveur, jamais seulement dans l'interface)
 	const [vente] = await db.select().from(ventes).where(eq(ventes.id, demande.venteId));
 	if (
 		!vente ||
@@ -109,14 +119,14 @@ export async function passerCommande(
 		return { ok: false, erreur: 'vente_fermee' };
 	}
 
-	// 3. Créneau de cette vente
+	// 4. Créneau de cette vente
 	const [creneau] = await db
 		.select({ id: creneaux.id })
 		.from(creneaux)
 		.where(and(eq(creneaux.id, demande.creneauId), eq(creneaux.venteId, vente.id)));
 	if (!creneau) return invalide('Créneau de retrait inconnu.');
 
-	// 4. Offres de cette vente, avec prix et unité au moment de la commande
+	// 5. Offres de cette vente, avec prix et unité au moment de la commande
 	const offresTrouvees = await db
 		.select({
 			id: offres.id,
@@ -137,11 +147,14 @@ export async function passerCommande(
 		const offre = parId.get(l.offreId);
 		if (!offre || !offre.actif) return invalide("Un produit du panier n'est plus proposé.");
 		if (l.quantite % offre.pas !== 0) return invalide(`Quantité invalide pour ${offre.nom}.`);
+		if (l.quantite > offre.pas * MAX_PAS_PAR_PRODUIT) {
+			return invalide(`${offre.nom} : quantité limitée par commande.`);
+		}
 		totalCentimes += prixLigneCentimes(offre.unite, offre.prixCentimes, l.quantite);
 		lignes.push({ ...l, prixUnitaireCentimes: offre.prixCentimes });
 	}
 
-	// 5. Écriture atomique
+	// 6. Écriture atomique
 	const statut = demande.modePaiement === 'retrait' ? 'confirmee' : 'en_attente_paiement';
 	for (let tentative = 1; ; tentative++) {
 		const id = crypto.randomUUID();
@@ -269,4 +282,57 @@ export async function annulerCommande(db: Db, commandeId: string): Promise<boole
 		db.update(commandes).set({ statut: 'annulee' }).where(active).returning({ id: commandes.id })
 	]);
 	return changement.length === 1;
+}
+
+/**
+ * Un client est bloqué quand son e-mail ou son téléphone totalise
+ * `ABSENCES_AVANT_BLOCAGE` commandes non récupérées, hors absences excusées.
+ */
+export async function estBloque(db: Db, email: string, telephone: string): Promise<boolean> {
+	const [{ n }] = await db
+		.select({ n: count() })
+		.from(commandes)
+		.where(
+			and(
+				eq(commandes.statut, 'non_recuperee'),
+				eq(commandes.absenceExcusee, false),
+				or(eq(commandes.email, email), eq(commandes.telephone, telephone))
+			)
+		);
+	return n >= ABSENCES_AVANT_BLOCAGE;
+}
+
+/** Début du créneau de retrait (heure de Paris) moins le délai d'annulation. */
+export function limiteAnnulation(creneau: { date: string; heureDebut: string }): Date {
+	const debut = depuisChampParis(`${creneau.date}T${creneau.heureDebut}`);
+	if (!debut) throw new Error(`Créneau illisible : ${creneau.date} ${creneau.heureDebut}`);
+	return new Date(debut.getTime() - ANNULATION_HEURES_AVANT_RETRAIT * 3600_000);
+}
+
+export type ResultatAnnulationClient = 'annulee' | 'introuvable' | 'deja_terminee' | 'trop_tard';
+
+/**
+ * Annulation par le client, avec le jeton secret de son lien. Possible tant que
+ * la commande est à retirer et que la limite (avant le retrait) n'est pas passée ;
+ * le stock et la place de créneau sont rendus.
+ */
+export async function annulerParClient(
+	db: Db,
+	jeton: string,
+	maintenant: Date = new Date()
+): Promise<ResultatAnnulationClient> {
+	const [c] = await db
+		.select({
+			id: commandes.id,
+			statut: commandes.statut,
+			date: creneaux.date,
+			heureDebut: creneaux.heureDebut
+		})
+		.from(commandes)
+		.innerJoin(creneaux, eq(creneaux.id, commandes.creneauId))
+		.where(eq(commandes.jetonAnnulation, jeton));
+	if (!c) return 'introuvable';
+	if (!(STATUTS_ACTIFS as readonly string[]).includes(c.statut)) return 'deja_terminee';
+	if (maintenant >= limiteAnnulation(c)) return 'trop_tard';
+	return (await annulerCommande(db, c.id)) ? 'annulee' : 'deja_terminee';
 }
