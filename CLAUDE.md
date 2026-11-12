@@ -299,6 +299,12 @@ signale. Textes à faire relire (chambre d'agriculture, conseiller).
 - Confirmation d'un virement : QR code EPC (`contenuEpc` dans
   `src/lib/virement.ts`, SVG généré côté serveur par `src/lib/server/qrcode.ts`),
   toujours avec l'IBAN en clair et des boutons « Copier ».
+- Données de démo en local : `npm run dev` lance d'abord `scripts/demo.ts`
+  (`predev`, exécuté par Node avec ses types retirés : imports relatifs avec
+  extension `.ts` obligatoire) qui applique les migrations locales puis appelle
+  `remplirDemo` (`src/lib/server/demo.ts`) s'il n'y a pas de vente ouverte.
+  Tout passe par les fonctions du site (`creerProduit`, `passerCommande`…).
+  `npm run db:demo` efface la base locale et recommence.
 - Tests de base de données : `baseDeTest()` (`src/lib/server/test/d1.ts`) donne
   une D1 locale en mémoire (Miniflare) avec les migrations appliquées.
 
