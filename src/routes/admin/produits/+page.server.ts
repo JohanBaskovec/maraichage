@@ -35,7 +35,13 @@ function lireProduit(form: FormData) {
 			: /^\d+$/.test(pasSaisi)
 				? Number(pasSaisi)
 				: NaN;
-	return { nom: texte(form, 'nom'), unite, pas };
+	return {
+		nom: texte(form, 'nom'),
+		unite,
+		pas,
+		description: texte(form, 'description'),
+		illustration: texte(form, 'illustration')
+	};
 }
 
 export const actions: Actions = {

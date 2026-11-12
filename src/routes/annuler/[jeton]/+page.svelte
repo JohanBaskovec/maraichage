@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { resolve } from '$app/paths';
+	import EnTeteBoutique from '#lib/composants/EnTeteBoutique.svelte';
 	import { NOM_BOUTIQUE } from '#lib/config.ts';
 	import { formatEuros, formatQuantite } from '#lib/format.ts';
-	import { formatDateHeure, formatJour } from '#lib/heure.ts';
+	import { formatDateHeure, formatJour, formatPlage } from '#lib/heure.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -15,6 +16,8 @@
 	<title>Annuler la commande {c.reference} – {NOM_BOUTIQUE}</title>
 	<meta name="robots" content="noindex" />
 </svelte:head>
+
+<EnTeteBoutique />
 
 <main>
 	{#if form?.resultat === 'annulee' || c.statut === 'annulee'}
@@ -32,19 +35,24 @@
 		<h1>Annulation impossible</h1>
 		<p class="avert">La commande {c.reference} ne peut plus être annulée.</p>
 	{:else}
+		<p class="manuscrit">un imprévu ?</p>
 		<h1>Annuler ma commande ?</h1>
 		<section class="carte">
+			<p class="reference">{c.reference}</p>
 			<p>
-				<strong>{c.reference}</strong> · {c.nom}<br />
-				Retrait {formatJour(c.creneau.date)}, {c.creneau.heureDebut}–{c.creneau.heureFin} ·
-				{c.creneau.lieu}
+				{c.nom}<br />
+				Retrait {formatJour(c.creneau.date)}, {formatPlage(
+					c.creneau.heureDebut,
+					c.creneau.heureFin
+				)}
+				· {c.creneau.lieu}
 			</p>
 			<ul>
 				{#each c.lignes as l (l.produit)}
 					<li>{l.produit} : {formatQuantite(l.unite, l.quantite)}</li>
 				{/each}
 			</ul>
-			<p>Total : {formatEuros(c.totalCentimes)}</p>
+			<p class="total">Total : {formatEuros(c.totalCentimes)}</p>
 		</section>
 		<form
 			method="POST"
@@ -68,10 +76,23 @@
 
 <style>
 	main {
-		max-width: 40rem;
+		max-width: 42rem;
 	}
 	ul {
 		margin: 0.5rem 0;
 		padding-left: 1.2rem;
+	}
+	.carte p {
+		margin: 0 0 0.5rem;
+	}
+	.reference {
+		font-family: var(--police-titre);
+		font-size: 1.5rem;
+		font-weight: 800;
+		letter-spacing: 0.06em;
+	}
+	.total {
+		margin: 0.75rem 0 0 !important;
+		font-weight: 700;
 	}
 </style>

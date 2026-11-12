@@ -7,6 +7,7 @@ import {
 	creerProduit,
 	creerVente,
 	dupliquerVente,
+	listerProduits,
 	listerVentes,
 	lireVente,
 	modifierDatesVente,
@@ -84,6 +85,44 @@ describe('produits', () => {
 		});
 		expect(await creerProduit(db, { nom: 'Radis', unite: 'botte', pas: 0 })).toMatchObject({
 			ok: false
+		});
+	});
+
+	it('enregistre la description et l’illustration, vides = aucune', async () => {
+		expect(
+			await modifierProduit(db, concombre, {
+				nom: 'Concombre',
+				unite: 'piece',
+				pas: 1,
+				description: '  Croquant, sans amertume  ',
+				illustration: 'poireaux'
+			})
+		).toEqual({ ok: true });
+		let [p] = (await listerProduits(db)).filter((x) => x.id === concombre);
+		expect(p).toMatchObject({ description: 'Croquant, sans amertume', illustration: 'poireaux' });
+
+		await modifierProduit(db, concombre, {
+			nom: 'Concombre',
+			unite: 'piece',
+			pas: 1,
+			description: ' ',
+			illustration: ''
+		});
+		[p] = (await listerProduits(db)).filter((x) => x.id === concombre);
+		expect(p).toMatchObject({ description: null, illustration: null });
+	});
+
+	it('refuse une illustration inconnue ou une description trop longue', async () => {
+		const base = { nom: 'Radis', unite: 'botte' as const, pas: 1 };
+		expect(await creerProduit(db, { ...base, illustration: '../secret' })).toMatchObject({
+			ok: false,
+			message: 'Illustration inconnue.'
+		});
+		expect(await creerProduit(db, { ...base, description: 'x'.repeat(121) })).toMatchObject({
+			ok: false
+		});
+		expect(await creerProduit(db, { ...base, description: 'x'.repeat(120) })).toMatchObject({
+			ok: true
 		});
 	});
 

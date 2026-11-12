@@ -66,7 +66,7 @@ describe('venteEnCours', () => {
 		await db.update(creneaux).set({ nbCommandes: 1 });
 		const v = await venteEnCours(db, PENDANT);
 		expect(v!.offres.map((o) => o.produit)).toEqual(['Pommes de terre']);
-		expect(v!.creneaux[0].complet).toBe(true);
+		expect(v!.creneaux[0]).toMatchObject({ complet: true, places: 0 });
 	});
 
 	it('ne renvoie rien hors des dates ou pour une vente non publiée', async () => {

@@ -10,9 +10,15 @@ Pile : SvelteKit 3 sur Cloudflare Workers, base Cloudflare D1, Drizzle ORM.
 
 ```sh
 npm ci
-npm run db:migrate:local   # crée/met à jour la base D1 locale (.wrangler/)
-npm run dev                # http://localhost:5173
+npm run dev                # http://localhost:5173 (back-office ouvert sur /admin)
 ```
+
+Avant de démarrer, `npm run dev` met à jour la base D1 locale (`.wrangler/`) et
+y ajoute des données de démonstration s'il n'y a pas de vente ouverte :
+produits avec leurs dessins, vente jusqu'au vendredi soir avec retrait le
+samedi, commandes dans tous les états (`scripts/demo.ts`). `npm run db:demo`
+efface la base locale et repart de ces données. La base de production n'est
+jamais touchée.
 
 `npm run preview` sert le build de production avec wrangler (http://localhost:4173).
 
@@ -27,6 +33,7 @@ npm run dev                # http://localhost:5173
 | `npm test`                        | Tests unitaires (Vitest)                                    |
 | `npm run db:generate`             | Génère une migration SQL dans `drizzle/` à partir du schéma |
 | `npm run db:migrate:local`        | Applique les migrations à la base locale                    |
+| `npm run db:demo`                 | Efface la base locale et la remplit de données de démo      |
 | `npm run db:migrate:remote`       | Applique les migrations à la base de production             |
 | `npm run deploy`                  | Build et déploiement manuel avec wrangler                   |
 

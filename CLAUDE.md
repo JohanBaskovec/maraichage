@@ -168,7 +168,7 @@ stock suffisant` qui modifie 0 rangée n'échouerait pas et laisserait passer
   `VIREMENT_BIC` (déclarés dans `src/secrets.d.ts`), lus par le hook dans
   `event.locals.virement` (`null` si absents ou IBAN invalide → virement non
   proposé). En local : `.dev.vars` (voir `.dev.vars.example`).
-- Option : QR code de virement au format EPC, toujours avec l'IBAN en clair à
+- QR code de virement au format EPC (réalisé), toujours avec l'IBAN en clair à
   côté.
 
 ## Parcours
@@ -283,6 +283,28 @@ signale. Textes à faire relire (chambre d'agriculture, conseiller).
   `src/lib/panier.ts`). Le serveur ne fait jamais confiance au panier : tout est
   revalidé par `passerCommande`. Les clients sont vouvoyés.
 - Nom affiché de la boutique : `NOM_BOUTIQUE` dans `src/lib/config.ts`.
+- Design (maquette « Boutique maraîchère – Design »,
+  https://claude.ai/artifact/P4FuCWXP83CDnyurbf44aR) : jetons de couleur,
+  typographie et composants communs (boutons `.tomate` / `.soleil` /
+  `.secondaire`, `.carte`, `.choix`, `.cagette`, `.motif-sombre`, `.manuscrit`)
+  dans `src/app.css` ; thème clair uniquement. Polices hébergées par le site
+  (paquets `@fontsource-variable/*`, jamais Google Fonts : pas de traceur).
+  En-tête de la boutique : `EnTeteBoutique.svelte` ; logo : `Logo.svelte`.
+  Le back-office reprend l'identité en plus dense (styles dans
+  `src/routes/admin/+layout.svelte`).
+- Produits : `description` (courte phrase, 120 caractères au plus) et
+  `illustration` (clé de `ILLUSTRATIONS`, `src/lib/illustrations.ts` ; fichiers
+  dans `static/illustrations/`, `panier.svg` par défaut), choisies dans
+  `/admin/produits`. La colonne `photo` reste réservée aux vraies photos (phase 3).
+- Confirmation d'un virement : QR code EPC (`contenuEpc` dans
+  `src/lib/virement.ts`, SVG généré côté serveur par `src/lib/server/qrcode.ts`),
+  toujours avec l'IBAN en clair et des boutons « Copier ».
+- Données de démo en local : `npm run dev` lance d'abord `scripts/demo.ts`
+  (`predev`, exécuté par Node avec ses types retirés : imports relatifs avec
+  extension `.ts` obligatoire) qui applique les migrations locales puis appelle
+  `remplirDemo` (`src/lib/server/demo.ts`) s'il n'y a pas de vente ouverte.
+  Tout passe par les fonctions du site (`creerProduit`, `passerCommande`…).
+  `npm run db:demo` efface la base locale et recommence.
 - Tests de base de données : `baseDeTest()` (`src/lib/server/test/d1.ts`) donne
   une D1 locale en mémoire (Miniflare) avec les migrations appliquées.
 

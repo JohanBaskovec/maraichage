@@ -8,6 +8,7 @@
 		"#lib/*": "./src/lib/*"
 	},
 	"scripts": {
+		"predev": "node scripts/demo.ts",
 		"dev": "vite dev",
 		"build": "wrangler types && vite build",
 		"preview": "wrangler dev .svelte-kit/cloudflare/_worker.js --port 4173",
@@ -21,6 +22,7 @@
 		"gen": "wrangler types",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate:local": "wrangler d1 migrations apply maraichage --local",
+		"db:demo": "node scripts/demo.ts --reinitialiser",
 		"db:migrate:remote": "wrangler d1 migrations apply maraichage --remote",
 		"deploy": "npm run build && wrangler deploy",
 		"test:e2e": "npm run build && playwright test",
@@ -30,6 +32,9 @@
 	"devDependencies": {
 		"@axe-core/playwright": "^4.14.0",
 		"@eslint/js": "^10.0.1",
+		"@fontsource-variable/bricolage-grotesque": "^5.3.0",
+		"@fontsource-variable/caveat": "^5.3.0",
+		"@fontsource-variable/figtree": "^5.3.0",
 		"@playwright/test": "1.63.0",
 		"@sveltejs/adapter-cloudflare": "^8.0.0",
 		"@sveltejs/kit": "^3.0.0",
@@ -44,6 +49,7 @@
 		"playwright-core": "1.63.0",
 		"prettier": "^3.8.3",
 		"prettier-plugin-svelte": "^4.1.0",
+		"qrcode-generator": "^2.0.4",
 		"svelte": "^5.57.2",
 		"svelte-check": "^4.6.0",
 		"typescript": "^6.0.3",

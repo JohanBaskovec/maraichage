@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formaterIban, ibanValide, lireCoordonneesVirement } from './virement';
+import { contenuEpc, formaterIban, ibanValide, lireCoordonneesVirement } from './virement';
 
 // IBAN d'exemple publiés (fictifs mais valides).
 const IBAN_FR = 'FR7630006000011234567890189';
@@ -55,5 +55,44 @@ describe('lireCoordonneesVirement', () => {
 			})
 		).toBeNull();
 		expect(console.error).toHaveBeenCalledOnce();
+	});
+});
+
+describe('contenuEpc', () => {
+	it('suit le format EPC 002 (bénéficiaire, IBAN compact, montant, libellé)', () => {
+		expect(
+			contenuEpc({
+				titulaire: 'La ferme d’Océane',
+				iban: 'FR76 3000 6000 0112 3456 7890 189',
+				bic: 'agrifrpp',
+				montantCentimes: 1125,
+				libelle: 'MAR-4F7K'
+			}).split('\n')
+		).toEqual([
+			'BCD',
+			'002',
+			'1',
+			'SCT',
+			'AGRIFRPP',
+			'La ferme d’Océane',
+			'FR7630006000011234567890189',
+			'EUR11.25',
+			'',
+			'',
+			'MAR-4F7K'
+		]);
+	});
+
+	it('laisse le BIC vide s’il est inconnu et tronque le nom à 70 caractères', () => {
+		const lignes = contenuEpc({
+			titulaire: 'x'.repeat(80),
+			iban: 'FR7630006000011234567890189',
+			bic: null,
+			montantCentimes: 80,
+			libelle: 'MAR-AAAA'
+		}).split('\n');
+		expect(lignes[4]).toBe('');
+		expect(lignes[5]).toHaveLength(70);
+		expect(lignes[7]).toBe('EUR0.80');
 	});
 });

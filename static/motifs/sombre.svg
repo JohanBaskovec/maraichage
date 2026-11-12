@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
+<g fill="none" stroke="#E8EEDC" stroke-opacity="0.12" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+<g transform="translate(40 44)">
+<ellipse cx="0" cy="-9" rx="4.5" ry="8"></ellipse>
+<ellipse cx="0" cy="-9" rx="4.5" ry="8" transform="rotate(72)"></ellipse>
+<ellipse cx="0" cy="-9" rx="4.5" ry="8" transform="rotate(144)"></ellipse>
+<ellipse cx="0" cy="-9" rx="4.5" ry="8" transform="rotate(216)"></ellipse>
+<ellipse cx="0" cy="-9" rx="4.5" ry="8" transform="rotate(288)"></ellipse>
+<circle cx="0" cy="0" r="3"></circle>
+</g>
+<g transform="translate(150 50)">
+<path d="M0 30 L0 10"></path>
+<circle cx="0" cy="-4" r="16"></circle>
+<path d="M0 10 L0 -14 M0 0 L-7 -6 M0 4 L7 -2"></path>
+<path d="M-10 30 L10 30"></path>
+</g>
+<g transform="translate(110 92)">
+<path d="M0 10 L0 0"></path>
+<path d="M0 2 C -6 0 -8 -4 -8 -8 C -2 -6 0 -2 0 2 Z"></path>
+<path d="M0 0 C 6 -2 8 -6 8 -10 C 2 -8 0 -4 0 0 Z"></path>
+</g>
+<g transform="translate(86 140)">
+<path d="M-12 26 C -4 8 4 -4 18 -20"></path>
+<path d="M-6 12 C -16 12 -20 4 -20 -2 C -12 -2 -6 4 -6 12 Z"></path>
+<path d="M0 2 C 8 4 14 0 16 -6 C 8 -8 2 -4 0 2 Z"></path>
+<path d="M6 -8 C -2 -10 -6 -16 -6 -22 C 2 -20 6 -14 6 -8 Z"></path>
+<path d="M12 -14 C 18 -12 22 -16 24 -22 C 18 -24 14 -20 12 -14 Z"></path>
+</g>
+<g transform="translate(205 140)">
+<path d="M0 -26 L-12 -4 L-5 -4 L-16 16 L16 16 L5 -4 L12 -4 Z"></path>
+<path d="M0 16 L0 24"></path>
+</g>
+<g transform="translate(34 182)">
+<path d="M0 34 L0 6"></path>
+<path d="M-8 -6 C -8 8 8 8 8 -6 L4 -2 L0 -10 L-4 -2 Z"></path>
+<path d="M0 24 C -8 20 -12 14 -12 8 C -4 10 0 16 0 24 Z"></path>
+</g>
+<g transform="translate(138 206)">
+<circle cx="0" cy="-6" r="4"></circle>
+<circle cx="5.7" cy="-1.9" r="4"></circle>
+<circle cx="3.5" cy="4.9" r="4"></circle>
+<circle cx="-3.5" cy="4.9" r="4"></circle>
+<circle cx="-5.7" cy="-1.9" r="4"></circle>
+</g>
+<g transform="translate(206 44)">
+<path d="M0 14 L0 -2"></path>
+<path d="M0 0 C -10 -2 -14 -10 -14 -16 C -6 -14 0 -8 0 0 Z"></path>
+<path d="M0 0 C 10 -2 14 -10 14 -16 C 6 -14 0 -8 0 0 Z"></path>
+</g>
+</g>
+<g fill="#E8EEDC" fill-opacity="0.12">
+<circle cx="108" cy="28" r="1.6"></circle>
+<circle cx="228" cy="96" r="1.6"></circle>
+<circle cx="66" cy="96" r="1.6"></circle>
+<circle cx="186" cy="204" r="1.6"></circle>
+<circle cx="120" cy="172" r="1.6"></circle>
+<circle cx="14" cy="122" r="1.6"></circle>
+<circle cx="232" cy="228" r="1.6"></circle>
+<circle cx="96" cy="226" r="1.6"></circle>
+</g>
+</svg>

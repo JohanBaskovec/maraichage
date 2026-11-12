@@ -5,6 +5,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const vente = await venteEnCours(locals.db);
 	return {
 		vente,
+		virement: locals.virement !== null,
 		prochaine: vente ? null : await prochaineVente(locals.db)
 	};
 };
