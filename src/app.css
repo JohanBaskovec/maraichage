@@ -1,72 +1,120 @@
-/* Styles communs à la boutique et au back-office. Pas de framework : quelques jetons et composants. */
+/*
+ * Styles communs à la boutique et au back-office (maquette « Boutique maraîchère –
+ * Design »). Pas de framework : des jetons, une typographie, quelques composants.
+ * Polices hébergées par le site (paquets @fontsource) : aucune requête vers Google.
+ */
+@import '@fontsource-variable/bricolage-grotesque/opsz.css';
+@import '@fontsource-variable/figtree/index.css';
+@import '@fontsource-variable/caveat/index.css';
 
 :root {
-	--fond: #fbfaf7;
-	--texte: #1f2a1f;
-	--discret: #5f6b5f;
-	--bord: #d9ddd3;
-	--accent: #2f6b3a;
-	--accent-texte: #fff;
-	--accent-doux: #e8f3ea;
-	--erreur: #a12a1f;
-	--erreur-fond: #fbeae8;
-	--avert-fond: #fdf4dc;
-	--carte: #fff;
-	--rayon: 10px;
-	color-scheme: light dark;
-}
+	/* Couleurs */
+	--creme: #f7f3ea;
+	--carte: #fffdf8;
+	--blanc: #ffffff;
+	--bord: #e2dacb;
+	--bord-fort: #d5ccba;
+	--sable: #c9bfab;
+	--foret: #1f3d2b; /* texte, fonds sombres */
+	--feuille: #3f6b45;
+	--feuille-doux: #e3ead6;
+	--feuille-pale: #dce5d0;
+	--sur-foret: #b9c8ae; /* texte discret sur fond sombre */
+	--soleil: #e8b44a;
+	--soleil-clair: #f2c766;
+	--soleil-pale: #fbefcb;
+	--tomate: #b53d27;
+	--tomate-fonce: #9a3220;
+	--tomate-pale: #f6ddd5;
+	--discret: #56665a;
 
-@media (prefers-color-scheme: dark) {
-	:root {
-		--fond: #161a16;
-		--texte: #e6eae3;
-		--discret: #a3ad9f;
-		--bord: #3a4238;
-		--accent: #6fbf7c;
-		--accent-texte: #102012;
-		--accent-doux: #1c3320;
-		--erreur: #f08a7e;
-		--erreur-fond: #3a1c19;
-		--avert-fond: #3a3115;
-		--carte: #1e231e;
-	}
+	/* Rôles */
+	--fond: var(--creme);
+	--texte: var(--foret);
+	--accent: var(--foret);
+	--erreur: #8f2e1d;
+	--erreur-fond: var(--tomate-pale);
+	--avert-fond: var(--soleil-pale);
+	--ok-fond: var(--feuille-doux);
+
+	/* Typographie */
+	--police-titre: 'Bricolage Grotesque Variable', 'Bricolage Grotesque', system-ui, sans-serif;
+	--police-texte: 'Figtree Variable', Figtree, system-ui, sans-serif;
+	--police-main: 'Caveat Variable', Caveat, cursive;
+
+	/* Formes */
+	--rayon: 22px;
+	--rayon-champ: 14px;
+	--largeur: 75rem;
+	--ombre: 0 18px 34px -22px rgb(31 61 43 / 0.55);
+
+	color-scheme: light;
 }
 
 * {
 	box-sizing: border-box;
 }
 
+html {
+	-webkit-text-size-adjust: 100%;
+}
+
 body {
 	margin: 0;
 	background: var(--fond);
 	color: var(--texte);
-	font:
-		16px/1.45 system-ui,
-		sans-serif;
-	-webkit-text-size-adjust: 100%;
+	font-family: var(--police-texte);
+	font-size: 16px;
+	line-height: 1.5;
 }
 
 main {
-	max-width: 56rem;
+	max-width: var(--largeur);
 	margin: 0 auto;
-	padding: 1rem;
+	padding: 1.75rem 1.5rem 3rem;
 }
 
+h1,
+h2,
+h3 {
+	font-family: var(--police-titre);
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+}
 h1 {
-	font-size: 1.5rem;
-	margin: 0.5rem 0 1rem;
+	font-size: clamp(2rem, 4vw, 3rem);
+	font-weight: 800;
+	margin: 0 0 1.5rem;
 }
 h2 {
-	font-size: 1.15rem;
-	margin: 2rem 0 0.75rem;
+	font-size: 1.45rem;
+	font-weight: 700;
+	margin: 2rem 0 1rem;
 }
 h3 {
-	font-size: 1rem;
+	font-size: 1.15rem;
+	font-weight: 700;
 	margin: 0 0 0.75rem;
 }
 a {
-	color: var(--accent);
+	color: var(--foret);
+	text-underline-offset: 0.15em;
 }
+a:hover {
+	color: var(--tomate);
+}
+
+/* Petite phrase manuscrite au-dessus d'un titre (« presque fini ! »). */
+.manuscrit {
+	margin: 0;
+	font-family: var(--police-main);
+	font-weight: 700;
+	font-size: 1.7rem;
+	line-height: 1.1;
+	color: var(--tomate);
+}
+
+/* ------------------------------------------------------------------ Formulaires */
 
 input,
 select,
@@ -75,64 +123,139 @@ textarea {
 	font: inherit;
 	color: inherit;
 }
-input,
+input:not([type='checkbox'], [type='radio']),
 select,
 textarea {
-	background: var(--carte);
-	border: 1px solid var(--bord);
-	border-radius: 6px;
-	padding: 0.45rem 0.55rem;
+	min-height: 48px;
 	min-width: 0;
+	padding: 0 0.9rem;
+	border: 2px solid var(--bord-fort);
+	border-radius: var(--rayon-champ);
+	background: var(--blanc);
+	color: var(--foret);
 }
-input:focus-visible,
-select:focus-visible,
-button:focus-visible,
-a:focus-visible {
-	outline: 2px solid var(--accent);
+textarea {
+	padding: 0.6rem 0.9rem;
+}
+input:not([type='checkbox'], [type='radio']):focus,
+select:focus,
+textarea:focus {
+	outline: none;
+	border-color: var(--foret);
+	box-shadow: 0 0 0 4px rgb(232 180 74 / 0.45);
+}
+input[type='checkbox'],
+input[type='radio'] {
+	width: 1.3rem;
+	height: 1.3rem;
+	margin: 0;
+	accent-color: var(--foret);
+}
+:focus-visible {
+	outline: 3px solid var(--soleil);
 	outline-offset: 2px;
-}
-
-button {
-	border: 1px solid var(--accent);
-	background: var(--accent);
-	color: var(--accent-texte);
-	border-radius: 6px;
-	padding: 0.45rem 0.9rem;
-	cursor: pointer;
-}
-button:disabled {
-	opacity: 0.5;
-	cursor: not-allowed;
-}
-button.secondaire {
-	background: transparent;
-	color: var(--accent);
-}
-button.danger {
-	background: transparent;
-	border-color: var(--erreur);
-	color: var(--erreur);
-}
-button.grand {
-	width: 100%;
-	padding: 0.8rem 1rem;
-	font-size: 1.05rem;
-	font-weight: 600;
 }
 
 label {
 	display: grid;
-	gap: 0.2rem;
+	gap: 0.35rem;
 	font-size: 0.9rem;
-	color: var(--discret);
+	font-weight: 700;
 }
+
+/* Boutons : vert forêt par défaut, tomate pour l'action principale du client,
+   soleil sur fond sombre, contour pour les actions secondaires. */
+button,
+.bouton {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	min-height: 44px;
+	padding: 0 1.2rem;
+	border: 2px solid var(--foret);
+	border-radius: 999px;
+	background: var(--foret);
+	color: var(--creme);
+	font-weight: 700;
+	text-decoration: none;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		border-color 0.15s,
+		color 0.15s;
+}
+button:hover:not(:disabled),
+.bouton:hover {
+	background: #163021;
+	color: var(--creme);
+}
+button:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+}
+button.secondaire,
+.bouton.secondaire {
+	background: var(--carte);
+	color: var(--foret);
+	border-color: var(--bord-fort);
+}
+button.secondaire:hover:not(:disabled),
+.bouton.secondaire:hover {
+	background: var(--carte);
+	color: var(--foret);
+	border-color: var(--foret);
+}
+button.tomate,
+.bouton.tomate {
+	background: var(--tomate);
+	border-color: var(--tomate);
+	color: var(--blanc);
+}
+button.tomate:hover:not(:disabled),
+.bouton.tomate:hover {
+	background: var(--tomate-fonce);
+	border-color: var(--tomate-fonce);
+	color: var(--blanc);
+}
+button.soleil,
+.bouton.soleil {
+	background: var(--soleil);
+	border-color: var(--soleil);
+	color: var(--foret);
+}
+button.soleil:hover:not(:disabled),
+.bouton.soleil:hover {
+	background: var(--soleil-clair);
+	border-color: var(--soleil-clair);
+	color: var(--foret);
+}
+button.danger {
+	background: var(--carte);
+	border-color: var(--tomate);
+	color: var(--tomate-fonce);
+}
+button.danger:hover:not(:disabled) {
+	background: var(--tomate-pale);
+	color: var(--tomate-fonce);
+}
+button.grand,
+.bouton.grand {
+	width: 100%;
+	min-height: 58px;
+	padding: 0.5rem 1.5rem;
+	font-size: 1.1rem;
+	text-align: center;
+}
+
+/* ------------------------------------------------------------------ Blocs */
 
 .carte {
 	background: var(--carte);
 	border: 1px solid var(--bord);
 	border-radius: var(--rayon);
-	padding: 1rem;
-	margin-bottom: 1rem;
+	padding: 1.5rem;
+	margin-bottom: 1.25rem;
 }
 .ligne {
 	display: flex;
@@ -140,40 +263,44 @@ label {
 	flex-wrap: wrap;
 	align-items: end;
 }
+.erreur,
+.avert,
+.ok {
+	border-radius: var(--rayon-champ);
+	padding: 0.75rem 1rem;
+	margin: 0.75rem 0;
+}
 .erreur {
 	background: var(--erreur-fond);
 	color: var(--erreur);
-	border-radius: 6px;
-	padding: 0.5rem 0.75rem;
-	margin: 0.5rem 0;
+	font-weight: 600;
 }
 .avert {
 	background: var(--avert-fond);
-	border-radius: 6px;
-	padding: 0.5rem 0.75rem;
-	margin: 0.5rem 0;
 }
 .ok {
-	background: var(--accent-doux);
-	border-radius: 6px;
-	padding: 0.5rem 0.75rem;
-	margin: 0.5rem 0;
+	background: var(--ok-fond);
 }
 .discret {
 	color: var(--discret);
 	font-size: 0.9rem;
 }
 .badge {
-	display: inline-block;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3rem;
 	font-size: 0.8rem;
-	padding: 0.1rem 0.5rem;
+	font-weight: 700;
+	padding: 0.2rem 0.65rem;
 	border-radius: 999px;
-	border: 1px solid var(--bord);
+	background: var(--creme);
+	border: 1px solid var(--bord-fort);
 	color: var(--discret);
 }
 .badge.publiee {
-	border-color: var(--accent);
-	color: var(--accent);
+	background: var(--feuille-doux);
+	border-color: var(--feuille);
+	color: var(--foret);
 }
 .vide {
 	color: var(--discret);
@@ -188,6 +315,140 @@ label {
 	white-space: nowrap;
 }
 
+/* Motifs de fleurs (static/motifs) et bord festonné sous une bande sombre. */
+.motif-sombre {
+	background-color: var(--foret);
+	background-image: url('/motifs/sombre.svg');
+	background-size: 240px 240px;
+	color: var(--creme);
+}
+.motif-clair {
+	background-color: var(--feuille-doux);
+	background-image: url('/motifs/clair.svg');
+	background-size: 240px 240px;
+}
+.festons {
+	height: 14px;
+	background-image: radial-gradient(circle at 14px 0, var(--foret) 13px, transparent 13.5px);
+	background-size: 28px 14px;
+	background-repeat: repeat-x;
+}
+
+/* Récapitulatif sombre « Votre cagette » (validation, confirmation). */
+.cagette {
+	border-radius: 24px;
+	background: var(--foret);
+	color: var(--creme);
+	overflow: hidden;
+}
+.cagette > header {
+	padding: 1.25rem 1.5rem 1rem;
+	border-bottom: 1px dashed rgb(220 229 208 / 0.3);
+}
+.cagette > header .manuscrit {
+	color: var(--soleil);
+	font-size: 1.5rem;
+}
+.cagette > header h2 {
+	margin: 0.1rem 0 0;
+	font-size: 1.5rem;
+	font-weight: 800;
+	color: var(--creme);
+}
+.cagette ul {
+	list-style: none;
+	margin: 0;
+	padding: 0.5rem 1.5rem 0;
+}
+.cagette li {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.6rem 0;
+	border-bottom: 1px solid rgb(220 229 208 / 0.16);
+}
+.cagette li img {
+	width: 42px;
+	height: 42px;
+	flex: none;
+	padding: 4px;
+	border-radius: 12px;
+	background: var(--feuille-doux);
+}
+.cagette .produit-ligne {
+	flex: 1;
+	min-width: 0;
+}
+.cagette .produit-ligne strong {
+	display: block;
+	font-weight: 600;
+	line-height: 1.3;
+}
+.cagette .produit-ligne span {
+	font-size: 0.875rem;
+	color: var(--sur-foret);
+}
+.cagette .montant {
+	font-weight: 700;
+	white-space: nowrap;
+}
+.cagette .total {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	padding: 1rem 1.5rem 1.4rem;
+	color: var(--feuille-pale);
+}
+.cagette .total strong {
+	font-family: var(--police-titre);
+	font-size: 2rem;
+	font-weight: 800;
+	color: var(--creme);
+}
+.cagette a {
+	color: var(--creme);
+}
+
+/* Cases à choisir (créneau, mode de paiement) : vrai bouton radio, carte cliquable. */
+.choix {
+	position: relative;
+	display: flex;
+	align-items: flex-start;
+	gap: 0.85rem;
+	padding: 1rem 1.1rem;
+	border: 2px solid var(--bord-fort);
+	border-radius: 16px;
+	background: var(--blanc);
+	color: var(--foret);
+	font-size: 1rem;
+	font-weight: 400;
+	cursor: pointer;
+	transition:
+		border-color 0.15s,
+		background 0.15s;
+}
+.choix:hover {
+	border-color: var(--foret);
+}
+.choix:has(input:checked) {
+	border-color: var(--foret);
+	background: var(--feuille-doux);
+}
+.choix:has(input:focus-visible) {
+	outline: 3px solid var(--soleil);
+	outline-offset: 2px;
+}
+.choix:has(input:disabled) {
+	background: #efeae0;
+	border-color: var(--bord);
+	color: #5f655e;
+	cursor: not-allowed;
+}
+.choix input {
+	flex: none;
+	margin-top: 0.15rem;
+}
+
 /* Impression (récap de préparation, liste des commandes) */
 @media print {
 	:root {
@@ -197,8 +458,6 @@ label {
 		--bord: #999;
 		--carte: #fff;
 		--accent: #000;
-		--accent-doux: #fff;
-		color-scheme: light;
 	}
 	body {
 		font-size: 11pt;
@@ -216,6 +475,7 @@ label {
 		break-inside: avoid;
 		padding: 0.5rem 0.75rem;
 		margin-bottom: 0.5rem;
+		border-radius: 6px;
 	}
 	a {
 		color: inherit;

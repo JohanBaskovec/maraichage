@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+<ellipse cx="60" cy="110" rx="36" ry="4" fill="#1F3D2B" opacity="0.12"></ellipse>
+<g stroke="#1F3D2B" stroke-width="2.5">
+<ellipse cx="62" cy="54" rx="25" ry="19" transform="rotate(8 62 54)" fill="#D9B27C"></ellipse>
+<ellipse cx="40" cy="80" rx="26" ry="20" transform="rotate(-14 40 80)" fill="#D9B27C"></ellipse>
+<ellipse cx="80" cy="86" rx="24" ry="18" transform="rotate(10 80 86)" fill="#CFA56C"></ellipse>
+</g>
+<g fill="#A9814F">
+<circle cx="54" cy="48" r="2"></circle>
+<circle cx="70" cy="58" r="1.8"></circle>
+<circle cx="32" cy="76" r="2"></circle>
+<circle cx="46" cy="88" r="1.8"></circle>
+<circle cx="76" cy="82" r="2"></circle>
+<circle cx="88" cy="92" r="1.8"></circle>
+</g>
+<path d="M27 72 C 29 68 33 65 37 64" fill="none" stroke="#F1D7A8" stroke-width="3" stroke-linecap="round"></path>
+<path d="M50 46 C 52 42 56 40 60 40" fill="none" stroke="#F1D7A8" stroke-width="3" stroke-linecap="round"></path>
+</svg>

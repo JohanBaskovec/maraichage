@@ -2,14 +2,19 @@
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { INFOS_LEGALES, NOM_BOUTIQUE } from '#lib/config.ts';
+	import EnTeteBoutique from './EnTeteBoutique.svelte';
 
 	let { titre, majLe, children }: { titre: string; majLe: string; children: Snippet } = $props();
 </script>
 
 <svelte:head><title>{titre} – {NOM_BOUTIQUE}</title></svelte:head>
 
+<EnTeteBoutique>
+	<a class="retour" href={resolve('/')}>← Retour à la boutique</a>
+</EnTeteBoutique>
+
 <main class="legal">
-	<p><a href={resolve('/')}>← Boutique</a></p>
+	<p class="manuscrit">à lire avant de commander</p>
 	<h1>{titre}</h1>
 	{#if INFOS_LEGALES.provisoire}
 		<p class="avert" role="note">
@@ -22,12 +27,22 @@
 </main>
 
 <style>
+	.retour {
+		display: inline-flex;
+		align-items: center;
+		min-height: 44px;
+		font-weight: 600;
+		text-decoration: none;
+	}
 	.legal {
-		max-width: 46rem;
+		max-width: 48rem;
+	}
+	.legal h1 {
+		margin-bottom: 1rem;
 	}
 	.legal :global(h2) {
-		font-size: 1.1rem;
-		margin: 1.75rem 0 0.5rem;
+		font-size: 1.35rem;
+		margin: 2.25rem 0 0.6rem;
 	}
 	.legal :global(p),
 	.legal :global(li) {

@@ -40,7 +40,8 @@ export async function venteEnCours(db: Db, maintenant: Date = new Date()) {
 				produit: produits.nom,
 				unite: produits.unite,
 				pas: produits.pas,
-				photo: produits.photo,
+				description: produits.description,
+				illustration: produits.illustration,
 				prixCentimes: offres.prixCentimes,
 				qteInitiale: offres.qteInitiale,
 				qteReservee: offres.qteReservee
@@ -61,6 +62,8 @@ export async function venteEnCours(db: Db, maintenant: Date = new Date()) {
 		cloture: vente.cloture,
 		offres: lesOffres
 			.filter((o) => o.qteInitiale > 0)
+			// Tri en JavaScript : SQLite classe « Céleri » après « Chou ».
+			.sort((a, b) => a.produit.localeCompare(b.produit, 'fr'))
 			.map(({ qteInitiale, qteReservee, ...o }) => ({
 				...o,
 				// On ne propose que des multiples entiers du pas.
@@ -68,7 +71,9 @@ export async function venteEnCours(db: Db, maintenant: Date = new Date()) {
 			})),
 		creneaux: lesCreneaux.map(({ nbCommandes, capacite, ...c }) => ({
 			...c,
-			complet: capacite !== null && nbCommandes >= capacite
+			complet: capacite !== null && nbCommandes >= capacite,
+			/** Places encore libres, `null` si le créneau est sans limite. */
+			places: capacite === null ? null : Math.max(0, capacite - nbCommandes)
 		}))
 	};
 }
@@ -123,6 +128,7 @@ async function lireCommandeOu(db: Db, condition: SQL) {
 		.select({
 			produit: produits.nom,
 			unite: produits.unite,
+			illustration: produits.illustration,
 			quantite: lignesCommande.quantite,
 			prixUnitaireCentimes: lignesCommande.prixUnitaireCentimes
 		})

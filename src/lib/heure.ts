@@ -63,3 +63,22 @@ export function formatDateHeure(date: Date): string {
 		minute: '2-digit'
 	});
 }
+
+/** « 9 h », « 9 h 30 » à partir d'une heure saisie « 09:30 ». */
+export function formatHeure(heure: string): string {
+	const [h, m] = heure.split(':');
+	return `${Number(h)} h${m && m !== '00' ? ` ${m}` : ''}`;
+}
+
+/** « 9 h – 12 h » */
+export function formatPlage(debut: string, fin: string): string {
+	return `${formatHeure(debut)} – ${formatHeure(fin)}`;
+}
+
+/** « samedi » pour « 2026-11-14 ». */
+export function jourSemaine(jour: string): string {
+	return new Date(jour + 'T12:00:00Z').toLocaleDateString('fr-FR', {
+		timeZone: 'UTC',
+		weekday: 'long'
+	});
+}

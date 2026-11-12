@@ -44,3 +44,31 @@ export function lireCoordonneesVirement(secrets: {
 	}
 	return { iban: formaterIban(iban), bic: secrets.VIREMENT_BIC?.trim() || null, titulaire };
 }
+
+/**
+ * Contenu d'un QR code de virement au format EPC (« SEPA Credit Transfer »,
+ * version 002, UTF-8), lu par la plupart des applications bancaires : il
+ * pré-remplit bénéficiaire, IBAN, montant et libellé.
+ */
+export function contenuEpc(v: {
+	titulaire: string;
+	iban: string;
+	bic: string | null;
+	montantCentimes: number;
+	libelle: string;
+}): string {
+	const montant = (v.montantCentimes / 100).toFixed(2);
+	return [
+		'BCD',
+		'002',
+		'1', // UTF-8
+		'SCT',
+		v.bic ? compact(v.bic) : '',
+		v.titulaire.trim().slice(0, 70),
+		compact(v.iban),
+		`EUR${montant}`,
+		'', // code de motif
+		'', // référence structurée
+		v.libelle.trim().slice(0, 140)
+	].join('\n');
+}

@@ -64,12 +64,16 @@ describe('page de confirmation', () => {
 		const data = await load(page(id));
 		expect(data.virement).toEqual(VIREMENT);
 		expect(data.commande.paiementAvant).toBeInstanceOf(Date);
+		expect(data.qrVirement).toMatch(/^<svg [^>]*aria-label="QR code du virement de MAR-/);
 	});
 
 	it('ne les donne plus une fois le virement reçu, ni pour un paiement au retrait', async () => {
 		const id = await commande('virement');
 		await confirmerPaiement(db, venteId, id);
-		expect((await load(page(id))).virement).toBeNull();
-		expect((await load(page(await commande('retrait')))).virement).toBeNull();
+		expect(await load(page(id))).toMatchObject({ virement: null, qrVirement: null });
+		expect(await load(page(await commande('retrait')))).toMatchObject({
+			virement: null,
+			qrVirement: null
+		});
 	});
 });

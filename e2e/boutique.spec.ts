@@ -20,13 +20,9 @@ test('le catalogue montre les produits en vente, sans les épuisés ni les masqu
 	page
 }) => {
 	await ouvrir(page, '/');
-	await expect(page.locator('li.produit strong')).toHaveText([
-		'Concombre',
-		'Pommes de terre',
-		'Radis'
-	]);
+	await expect(page.locator('li.produit h3')).toHaveText(['Concombre', 'Pommes de terre', 'Radis']);
 	await expect(produit(page, 'Concombre')).toContainText('0,80 € la pièce');
-	await expect(produit(page, 'Pommes de terre')).toContainText('reste 80 kg');
+	await expect(produit(page, 'Pommes de terre')).toContainText('Reste 80 kg');
 	await verifierAccessibilite(page);
 	await verifierLargeur(page);
 });
@@ -47,31 +43,33 @@ test('un client remplit son panier, commande et reçoit sa référence', async (
 	await page.getByRole('link', { name: 'Valider mon panier' }).click();
 	await expect(page).toHaveURL(/\/commande\?/);
 	await attendreValidation(page);
-	await expect(page.locator('table')).toContainText('Concombre');
-	await expect(page.locator('tfoot')).toContainText('5,35 €');
+	await expect(page.locator('.cagette')).toContainText('Concombre');
+	await expect(page.locator('.cagette .total')).toContainText('5,35 €');
 	await verifierAccessibilite(page);
 	await verifierLargeur(page);
 
 	await remplirCoordonnees(page, 'Camille Martin', 'camille@example.fr');
-	await page.getByText('À la ferme').click();
+	await page.locator('.creneaux').getByText('À la ferme').click();
 	await page.getByLabel(/J’ai lu et j’accepte/).check();
-	await page.getByRole('button', { name: /Commander – je paierai 5,35 €/ }).click();
+	await expect(page.getByText('Vous réglerez 5,35 € au moment du retrait.')).toBeVisible();
+	await page
+		.getByRole('button', { name: 'Commander avec obligation de paiement · 5,35 €' })
+		.click();
 
 	await expect(page).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
-	await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-		'Merci Camille, votre commande est enregistrée'
-	);
+	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Vos légumes sont réservés.');
+	await expect(page.locator('main')).toContainText('Merci Camille !');
 	await expect(page.locator('.reference strong')).toHaveText(/^MAR-[2-9A-HJKMNP-Z]{4}$/);
 	await expect(page.locator('main')).toContainText('À la ferme');
-	await expect(page.locator('tfoot')).toContainText('5,35 €');
+	await expect(page.locator('.cagette .total')).toContainText('5,35 €');
 	await verifierAccessibilite(page);
 	await verifierLargeur(page);
 
 	// Retour à la boutique : panier vidé, stock à jour.
 	await ouvrir(page, '/');
 	await expect(page.locator('.barre')).toHaveCount(0);
-	await expect(produit(page, 'Concombre')).toContainText('reste 198 pièces');
-	await expect(produit(page, 'Pommes de terre')).toContainText('reste 78,5 kg');
+	await expect(produit(page, 'Concombre')).toContainText('Reste 198 pièces');
+	await expect(produit(page, 'Pommes de terre')).toContainText('Reste 78,5 kg');
 
 	// Les coordonnées sont pré-remplies la fois suivante.
 	await plus(page, 'Concombre').click();
@@ -112,41 +110,43 @@ test('si un autre client est plus rapide, le panier est ajusté sans perdre la s
 	await rapide.getByRole('link', { name: 'Valider mon panier' }).click();
 	await attendreValidation(rapide);
 	await remplirCoordonnees(rapide, 'Sam Rapide', 'sam@example.fr');
-	await rapide.getByText('Marché de la place').click();
+	await rapide.locator('.creneaux').getByText('Marché de la place').click();
 	await rapide.getByLabel(/J’ai lu et j’accepte/).check();
 	await rapide.getByRole('button', { name: /^Commander/ }).click();
 	await expect(rapide).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
 
 	// Le client lent valide : refusé, panier ajusté, saisie conservée.
-	await lent.getByText('À la ferme').click();
+	await lent.locator('.creneaux').getByText('À la ferme').click();
 	await lent.getByLabel(/J’ai lu et j’accepte/).check();
 	await lent.getByRole('button', { name: /^Commander/ }).click();
 	await expect(lent.getByRole('alert')).toContainText('Radis : il n’en reste que 1 botte.');
 	await expect(lent.locator('.avert')).toContainText('Radis ramené à 1 botte');
-	await expect(lent.locator('tbody')).toContainText('1 botte');
+	await expect(lent.locator('.cagette')).toContainText('1 botte');
 	await expect(lent.getByLabel('Nom et prénom')).toHaveValue('Lou Lent');
 	// Le créneau du marché est maintenant complet.
 	await expect(lent.getByRole('radio', { name: /Marché de la place/ })).toBeDisabled();
 
 	// Il revalide avec le panier ajusté.
 	await lent.getByLabel(/J’ai lu et j’accepte/).check();
-	await lent.getByRole('button', { name: /Commander – je paierai 1,50 €/ }).click();
+	await lent
+		.getByRole('button', { name: /Commander avec obligation de paiement · 1,50 €/ })
+		.click();
 	await expect(lent).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
 
 	// Plus de radis pour personne.
 	await ouvrir(lent, '/');
-	await expect(produit(lent, 'Radis')).toContainText('épuisé');
+	await expect(produit(lent, 'Radis')).toContainText('Épuisé');
 });
 
 test('un client annule lui-même sa commande ; le stock revient', async ({ page }) => {
 	await ouvrir(page, '/');
-	const avant = await produit(page, 'Concombre').locator('.discret').first().textContent();
+	const avant = await produit(page, 'Concombre').locator('.stock').textContent();
 	await plus(page, 'Concombre').click();
 	await plus(page, 'Concombre').click();
 	await page.getByRole('link', { name: 'Valider mon panier' }).click();
 	await attendreValidation(page);
 	await remplirCoordonnees(page, 'Alex Annule', 'alex@example.fr');
-	await page.getByText('À la ferme').click();
+	await page.locator('.creneaux').getByText('À la ferme').click();
 	await page.getByLabel(/J’ai lu et j’accepte/).check();
 	await page.getByRole('button', { name: /^Commander/ }).click();
 	await expect(page).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
@@ -164,7 +164,7 @@ test('un client annule lui-même sa commande ; le stock revient', async ({ page 
 	await page.reload();
 	await expect(page.getByRole('heading', { level: 1 })).toHaveText('Commande annulée');
 	await ouvrir(page, '/');
-	await expect(produit(page, 'Concombre').locator('.discret').first()).toHaveText(avant!);
+	await expect(produit(page, 'Concombre').locator('.stock')).toHaveText(avant!);
 });
 
 test('un client paie par virement : coordonnées, libellé et date limite', async ({ page }) => {
@@ -173,14 +173,19 @@ test('un client paie par virement : coordonnées, libellé et date limite', asyn
 	await page.getByRole('link', { name: 'Valider mon panier' }).click();
 	await attendreValidation(page);
 	await remplirCoordonnees(page, 'Vic Virement', 'vic@example.fr');
-	await page.getByText('À la ferme').click();
-	await page.getByText('Par virement').click();
+	await page.locator('.creneaux').getByText('À la ferme').click();
+	await page.locator('.paiements').getByText('Par virement').click();
 	await page.getByLabel(/J’ai lu et j’accepte/).check();
-	await page.getByRole('button', { name: 'Commander – je paierai 0,80 € par virement' }).click();
+	await expect(page.getByText('L’IBAN et la référence à indiquer s’affichent')).toBeVisible();
+	await page
+		.getByRole('button', { name: 'Commander avec obligation de paiement · 0,80 €' })
+		.click();
 	await expect(page).toHaveURL(/\/commande\/[0-9a-f-]{36}$/);
 
 	const bloc = page.locator('section.virement');
-	await expect(bloc.getByRole('heading')).toContainText('À payer par virement avant le');
+	await expect(bloc.getByRole('heading')).toHaveText('Réglez par virement');
+	await expect(bloc).toContainText('À faire avant le');
+	await expect(bloc.getByRole('img', { name: /QR code du virement de MAR-/ })).toBeVisible();
 	await expect(bloc).toContainText('FR76 3000 6000 0112 3456 7890 189');
 	await expect(bloc).toContainText('Ferme des Tests');
 	await expect(bloc).toContainText('0,80 €');

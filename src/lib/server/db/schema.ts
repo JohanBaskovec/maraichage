@@ -37,6 +37,10 @@ export const produits = sqliteTable(
 		/** Pas d'ajout dans le panier, en unité de base (1 pièce, 500 g…). */
 		pas: integer('pas').notNull().default(1),
 		photo: text('photo'),
+		/** Courte phrase affichée sous le nom (« Doux et fondant, parfait en velouté »). */
+		description: text('description'),
+		/** Dessin choisi parmi `ILLUSTRATIONS` (src/lib/illustrations.ts), sinon générique. */
+		illustration: text('illustration'),
 		actif: integer('actif', { mode: 'boolean' }).notNull().default(true)
 	},
 	(t) => [

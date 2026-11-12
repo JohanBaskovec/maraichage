@@ -12,6 +12,7 @@ import {
 	type Unite
 } from './db/schema.ts';
 import { ajouterJours } from '#lib/heure.ts';
+import { DESCRIPTION_MAX, estIllustration } from '#lib/illustrations.ts';
 
 // Opérations du back-office. Chaque fonction qui peut être refusée renvoie
 // un `Resultat` avec un message prêt à afficher au maraîcher.
@@ -56,10 +57,27 @@ export interface ProduitSaisi {
 	nom: string;
 	unite: Unite;
 	pas: number;
+	/** Courte phrase pour les clients ; vide = aucune. */
+	description?: string | null;
+	/** Clé de `ILLUSTRATIONS` ; vide = dessin générique. */
+	illustration?: string | null;
+}
+
+/** Description et illustration nettoyées (chaîne vide → null). */
+function presentation(p: ProduitSaisi) {
+	return {
+		description: p.description?.trim() || null,
+		illustration: p.illustration?.trim() || null
+	};
 }
 
 function verifierProduit(p: ProduitSaisi): string | null {
 	if (!p.nom.trim()) return 'Le nom est obligatoire.';
+	const { description, illustration } = presentation(p);
+	if (description && description.length > DESCRIPTION_MAX) {
+		return `La description doit tenir en ${DESCRIPTION_MAX} caractères.`;
+	}
+	if (illustration && !estIllustration(illustration)) return 'Illustration inconnue.';
 	if (!['piece', 'botte', 'kg'].includes(p.unite)) return 'Unité inconnue.';
 	if (!Number.isSafeInteger(p.pas) || p.pas <= 0) return 'Le pas doit être un nombre positif.';
 	return null;
@@ -70,7 +88,7 @@ export async function creerProduit(db: Db, p: ProduitSaisi): Promise<Resultat<{ 
 	if (erreur) return refus(erreur);
 	const [cree] = await db
 		.insert(produits)
-		.values({ nom: p.nom.trim(), unite: p.unite, pas: p.pas })
+		.values({ nom: p.nom.trim(), unite: p.unite, pas: p.pas, ...presentation(p) })
 		.returning({ id: produits.id });
 	return { ok: true, id: cree.id };
 }
@@ -88,7 +106,7 @@ export async function modifierProduit(db: Db, id: number, p: ProduitSaisi): Prom
 	}
 	await db
 		.update(produits)
-		.set({ nom: p.nom.trim(), unite: p.unite, pas: p.pas })
+		.set({ nom: p.nom.trim(), unite: p.unite, pas: p.pas, ...presentation(p) })
 		.where(eq(produits.id, id));
 	return { ok: true };
 }

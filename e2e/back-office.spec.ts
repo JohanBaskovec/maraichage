@@ -241,7 +241,7 @@ test('des clients commandent ; le maraîcher prépare, encaisse, remet et annule
 	await expect(page.getByText('Aucune commande à préparer.')).toBeVisible();
 	await ouvrir(page, '/');
 	await expect(page.locator('li.produit', { hasText: 'Concombre' })).toContainText(
-		'reste 198 pièces'
+		'Reste 198 pièces'
 	);
 });
 

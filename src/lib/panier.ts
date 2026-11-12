@@ -35,8 +35,8 @@ export function quantiteMax(offre: Pick<OffrePanier, 'pas' | 'restant'>): number
 	return Math.min(offre.restant, offre.pas * MAX_PAS_PAR_PRODUIT);
 }
 
-export interface LigneRecap {
-	offre: OffrePanier;
+export interface LigneRecap<O extends OffrePanier = OffrePanier> {
+	offre: O;
 	quantite: number;
 	prixCentimes: number;
 	/** La quantité demandée a été réduite (stock restant ou limite par commande). */
@@ -48,8 +48,8 @@ export interface LigneRecap {
  * sont ignorés, les quantités ramenées à un multiple du pas, au stock restant et
  * à la limite par commande.
  */
-export function recapitulatif(offres: OffrePanier[], quantites: Quantites) {
-	const lignes: LigneRecap[] = [];
+export function recapitulatif<O extends OffrePanier>(offres: O[], quantites: Quantites) {
+	const lignes: LigneRecap<O>[] = [];
 	for (const offre of offres) {
 		const demandee = quantites.get(offre.id);
 		if (!demandee) continue;
